@@ -1,0 +1,43 @@
+{% extends "restaurant/base.html" %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --staff-primary: #2c3e50;
+        --staff-secondary: #e67e22;
+    }
+    
+    .navbar-staff {
+        background-color: var(--staff-primary);
+    }
+    
+    .order-card {
+        transition: all 0.3s ease;
+    }
+    
+    .order-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}
+
+{% block navbar %}
+<nav class="navbar navbar-expand-lg navbar-dark navbar-staff">
+    <div class="container">
+        <a class="navbar-brand" href="{% url 'staff_dashboard' %}">
+            <i class="bi bi-people-fill"></i> Staff Portal
+        </a>
+        <div class="collapse navbar-collapse">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'waiter_orders' %}">Orders</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'reservation_list' %}">Reservations</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+{% endblock %}

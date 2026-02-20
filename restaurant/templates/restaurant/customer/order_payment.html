@@ -1,0 +1,88 @@
+{% extends "restaurant/customer/base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="payment-status-container">
+    <div class="payment-status-card">
+        <!-- Header -->
+        <div class="status-header">
+            <h1>
+                {% if order.payment_status == 'COMPLETED' %}
+                    ✅ Payment Successful
+                {% elif order.payment_status == 'PENDING' %}
+                    ⏳ Payment Processing
+                {% else %}
+                    ❌ Payment Failed
+                {% endif %}
+            </h1>
+            <p>Order #{{ order.id }}</p>
+        </div>
+
+        <!-- Payment Details -->
+        <div class="payment-details">
+            <div class="detail-row">
+                <span>Amount Paid:</span>
+                <span>${{ order.total }}</span>
+            </div>
+            <div class="detail-row">
+                <span>Payment Method:</span>
+                <span>
+                    {% if order.payment_method == 'card' %}💳 Card
+                    {% elif order.payment_method == 'mtn' %}📱 MTN MoMo
+                    {% elif order.payment_method == 'airtel' %}📱 Airtel Money
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+
+        <!-- Mobile Money Instructions (Conditional) -->
+        {% if order.payment_status == 'PENDING' and order.payment_method in ['mtn','airtel'] %}
+        <div class="momo-instructions">
+            <h3>Complete Your Payment:</h3>
+            <ol>
+                <li>Check your phone for a payment request</li>
+                <li>Enter your mobile money PIN</li>
+                <li>Wait for confirmation SMS</li>
+            </ol>
+            <p class="note">Haven't received the request? <a href="#">Resend Payment Link</a></p>
+        </div>
+        {% endif %}
+
+        <!-- Next Steps -->
+        <div class="next-steps">
+            {% if order.payment_status == 'COMPLETED' %}
+                <p>Your order is being prepared. You'll receive an SMS when ready.</p>
+                <a href="{% url 'order_confirmation' order.id %}" class="btn btn-primary">
+                    View Order Details
+                </a>
+            {% elif order.payment_status == 'PENDING' %}
+                <div class="payment-loader">
+                    <div class="spinner"></div>
+                    <p>Verifying payment...</p>
+                </div>
+                <p class="auto-refresh-note">Page will auto-refresh in <span id="countdown">30</span>s</p>
+            {% else %}
+                <a href="{% url 'checkout' %}" class="btn btn-retry">
+                    Try Another Payment Method
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-refresh for pending payments
+{% if order.payment_status == 'PENDING' %}
+let countdown = 30;
+const countdownEl = document.getElementById('countdown');
+const timer = setInterval(() => {
+    countdown--;
+    countdownEl.textContent = countdown;
+    if (countdown <= 0) {
+        clearInterval(timer);
+        window.location.reload();
+    }
+}, 1000);
+{% endif %}
+</script>
+{% endblock %}

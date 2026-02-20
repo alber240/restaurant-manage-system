@@ -1,0 +1,29 @@
+{% extends "restaurant/base.html" %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center">
+            <div class="card shadow-sm">
+                <div class="card-body p-5">
+                    <div class="mb-4">
+                        <i class="bi bi-check-circle-fill text-success" style="font-size: 5rem;"></i>
+                    </div>
+                    <h2 class="mb-3">Reservation Confirmed!</h2>
+                    <p class="lead mb-4">
+                        Thank you for your reservation. We've sent a confirmation to your email.
+                    </p>
+                    <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+                        <a href="{% url 'menu' %}" class="btn btn-primary px-4">
+                            Browse Our Menu
+                        </a>
+                        <a href="{% url 'home' %}" class="btn btn-outline-secondary px-4">
+                            Return Home
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

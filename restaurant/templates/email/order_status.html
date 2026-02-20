@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Order Status Update</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .container { max-width: 600px; margin: 20px auto; padding: 20px; border: 1px solid #ddd; }
+        .status { font-size: 1.4em; color: #007bff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Order #{{ order.id }} Update</h2>
+        <p>Hello {{ order.user.get_full_name|default:order.user.username }},</p>
+        <p class="status">Your order is now: <strong>{{ order.get_status_display }}</strong></p>
+        {% if order.status == 'ready' %}
+            <p>It's ready for pickup! Please come to the restaurant.</p>
+        {% endif %}
+        <p>Thank you for choosing us!</p>
+    </div>
+</body>
+</html>

@@ -1,0 +1,87 @@
+{% extends "restaurant/customer/base.html" %}
+
+{% block content %}
+<div class="container py-5">
+    <h1 class="mb-4">Your Cart</h1>
+    
+    {% if cart_items %}
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Price</th>
+                    <th>Quantity</th>
+                    <th>Total</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in cart_items %}
+                <tr>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            {% if item.item.image %}
+                            <img src="{{ item.item.image.url }}" 
+                                 alt="{{ item.item.name }}" 
+                                 class="img-thumbnail me-3" 
+                                 style="width: 80px; height: 80px; object-fit: cover;">
+                            {% endif %}
+                            <div>
+                                <h5 class="mb-1">{{ item.item.name }}</h5>
+                                <small class="text-muted">{{ item.item.category.name }}</small>
+                            </div>
+                        </div>
+                    </td>
+                    <td>${{ item.item.price }}</td>
+                    <td>
+                        <form action="{% url 'update_cart' item.item.id %}" method="post" class="d-flex">
+                            {% csrf_token %}
+                            <input type="number" name="quantity" 
+                                   value="{{ item.quantity }}" 
+                                   min="1" max="10" 
+                                   class="form-control form-control-sm" 
+                                   style="width: 60px;">
+                            <button type="submit" class="btn btn-sm btn-outline-primary ms-2">
+                                Update
+                            </button>
+                        </form>
+                    </td>
+                    <td>${{ item.subtotal }}</td>
+                    <td>
+                        <a href="{% url 'remove_from_cart' item.item.id %}" class="btn btn-sm btn-danger">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="3" class="text-end fw-bold">Subtotal:</td>
+                    <td colspan="2" class="fw-bold">${{ cart.total }}</td>
+                </tr>
+            </tfoot>
+        </table>
+        
+        <div class="text-end">
+            <a href="{% url 'menu' %}" class="btn btn-outline-secondary me-2">
+                Continue Shopping
+            </a>
+            <a href="{% url 'checkout' %}" class="btn btn-primary">
+                Proceed to Checkout
+            </a>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-cart-x"></i> Your cart is empty.
+    </div>
+    <div class="text-center">
+        <a href="{% url 'menu' %}" class="btn btn-primary">
+            Browse Our Menu
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

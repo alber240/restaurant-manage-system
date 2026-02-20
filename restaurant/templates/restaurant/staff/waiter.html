@@ -1,0 +1,97 @@
+{% extends "restaurant/staff/base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-bell me-2"></i>Active Orders</h2>
+        <button class="btn btn-outline-primary" id="refresh-orders">
+            <i class="bi bi-arrow-clockwise"></i> Refresh
+        </button>
+    </div>
+
+    <div class="row" id="orders-container">
+        {% for order in active_orders %}
+        <div class="col-md-6 col-lg-4 mb-4 order-card-wrapper" data-order-id="{{ order.id }}">
+            <div class="card order-card {% if order.priority %}border-danger{% endif %}">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Order #{{ order.id }}</span>
+                    <span class="badge bg-{% if order.status == 'received' %}warning{% elif order.status == 'preparing' %}primary{% elif order.status == 'ready' %}success{% else %}secondary{% endif %}">
+                        {{ order.get_status_display }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Table: {{ order.table.number|default:"N/A" }}</h6>
+                    <ul class="list-group list-group-flush">
+                        {% for item in order.items.all %}
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>{{ item.item.name }}</span>
+                            <span class="badge bg-secondary">x{{ item.quantity }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div class="card-footer">
+                    <div class="d-grid gap-2">
+                        {% if order.status == 'received' %}
+                        <button class="btn btn-sm btn-success mark-preparing" data-order-id="{{ order.id }}">
+                            Mark as Preparing
+                        </button>
+                        {% elif order.status == 'preparing' %}
+                        <button class="btn btn-sm btn-primary mark-ready" data-order-id="{{ order.id }}">
+                            Mark as Ready
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info">No active orders at this time.</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Refresh button
+    document.getElementById('refresh-orders').addEventListener('click', function() {
+        window.location.reload();
+    });
+
+    // Status update buttons
+    document.querySelectorAll('.mark-preparing, .mark-ready').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const orderId = this.dataset.orderId;
+            const newStatus = this.classList.contains('mark-preparing') ? 'preparing' : 'ready';
+            updateOrderStatus(orderId, newStatus);
+        });
+    });
+
+    function updateOrderStatus(orderId, status) {
+        fetch(`/staff/orders/${orderId}/update-status/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `status=${status}`
+        })
+        .then(response => {
+            if (response.ok) {
+                // Optionally update UI without reload
+                window.location.reload();
+            } else {
+                alert('Failed to update status.');
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+});
+</script>
+{% endblock %}

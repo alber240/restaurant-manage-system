@@ -1,0 +1,197 @@
+{% extends "restaurant/base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    .reservation-card {
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.25rem rgba(230, 126, 34, 0.25);
+    }
+    
+    .select2-container--default .select2-selection--single {
+        height: 38px;
+        padding: 5px;
+    }
+    
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 36px;
+    }
+    
+    .is-invalid {
+        border-color: #dc3545;
+    }
+    
+    .invalid-feedback {
+        display: none;
+        color: #dc3545;
+        font-size: 0.875em;
+    }
+    
+    .was-validated .form-control:invalid ~ .invalid-feedback,
+    .was-validated .form-select:invalid ~ .invalid-feedback {
+        display: block;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card reservation-card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="bi bi-calendar-check me-2"></i>Make a Reservation</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="reservation-form" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6 mb-3">
+                                <label for="id_name" class="form-label">Full Name</label>
+                                {{ form.name }}
+                                <div class="invalid-feedback">
+                                    Please provide your name.
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="id_phone" class="form-label">Phone Number</label>
+                                {{ form.phone }}
+                                <div class="invalid-feedback">
+                                    Please provide a valid phone number.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6 mb-3">
+                                <label for="id_date" class="form-label">Date</label>
+                                {{ form.date }}
+                                <div class="invalid-feedback">
+                                    Please select a valid date.
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="id_time" class="form-label">Time</label>
+                                {{ form.time }}
+                                <div class="invalid-feedback">
+                                    Please select a valid time.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6 mb-3">
+                                <label for="id_guests" class="form-label">Number of Guests</label>
+                                {{ form.guests }}
+                                <div class="invalid-feedback">
+                                    Please enter number of guests (1-20).
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="id_table" class="form-label">Preferred Table</label>
+                                {{ form.table }}
+                                <div class="invalid-feedback">
+                                    Please select a table.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="id_special_requests" class="form-label">Special Requests</label>
+                            {{ form.special_requests }}
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary py-2">
+                                <i class="bi bi-check-circle me-2"></i>Submit Reservation
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+$(document).ready(function() {
+    // Initialize datepicker with restrictions
+    $('#id_date').datepicker({
+        format: 'yyyy-mm-dd',
+        startDate: '0d',
+        endDate: '+30d',
+        autoclose: true,
+        todayHighlight: true
+    });
+
+    // Initialize time slots with Select2
+    $('#id_time').select2({
+        placeholder: "Select preferred time",
+        allowClear: true,
+        width: '100%'
+    });
+
+    // Form validation
+    $('#reservation-form').on('submit', function(e) {
+        const form = $(this);
+        
+        if (form[0].checkValidity() === false) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        form.addClass('was-validated');
+        
+        if (form[0].checkValidity()) {
+            e.preventDefault();
+            
+            // Show loading state
+            const submitBtn = form.find('button[type="submit"]');
+            const originalText = submitBtn.html();
+            submitBtn.prop('disabled', true);
+            submitBtn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...');
+            
+            $.ajax({
+                url: form.attr('action'),
+                method: 'POST',
+                data: form.serialize(),
+                success: function(response) {
+                    if (response.success) {
+                        window.location.href = "{% url 'reservation_success' %}";
+                    } else {
+                        // Handle form errors
+                        submitBtn.html(originalText).prop('disabled', false);
+                        if (response.errors) {
+                            Object.keys(response.errors).forEach(field => {
+                                const input = $(`#id_${field}`);
+                                input.addClass('is-invalid');
+                                input.next('.invalid-feedback').text(response.errors[field][0]).show();
+                            });
+                        }
+                    }
+                },
+                error: function() {
+                    submitBtn.html(originalText).prop('disabled', false);
+                    alert('An error occurred. Please try again.');
+                }
+            });
+        }
+    });
+    
+    // Clear validation on input
+    $('input, select').on('input change', function() {
+        $(this).removeClass('is-invalid');
+    });
+});
+</script>
+{% endblock %}

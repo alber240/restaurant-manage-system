@@ -1,0 +1,101 @@
+{% extends "restaurant/base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="hero-section mb-5">
+    <div class="container">
+        <h1 class="display-3 fw-bold mb-4">About Chicha & Chaimo</h1>
+        <p class="lead">Discover our story and passion for authentic cuisine</p>
+    </div>
+</div>
+
+<div class="container py-5">
+    <div class="row align-items-center mb-5">
+        <div class="col-lg-6">
+            <h2 class="section-title">Our Restaurant</h2>
+            <p class="lead">Welcome to Chicha & Chaimo Restaurant and Bar, where culinary excellence meets warm hospitality.</p>
+            <p>Founded in 2010, our restaurant has been serving authentic dishes made from locally-sourced ingredients and traditional recipes passed down through generations. Our chefs bring years of experience and a passion for creating memorable dining experiences.</p>
+            <p>Located in the heart of the city, our restaurant offers a cozy yet elegant atmosphere perfect for family dinners, romantic dates, or business meetings. Our carefully curated menu features a blend of traditional favorites and innovative creations, all prepared with the freshest ingredients.</p>
+            
+            <div class="mt-4">
+                <h5><i class="bi bi-geo-alt-fill text-primary me-2"></i> Our Location</h5>
+                <p>123 Gourmet Avenue, Foodie District<br>Cityville, CV 12345</p>
+                
+                <h5 class="mt-3"><i class="bi bi-clock-fill text-primary me-2"></i> Opening Hours</h5>
+                <p>Monday - Thursday: 11:00 AM - 10:00 PM<br>
+                Friday - Saturday: 11:00 AM - 11:00 PM<br>
+                Sunday: 10:00 AM - 9:00 PM</p>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <img src="{% static 'images/restaurant-interior.jpg' %}" alt="Restaurant Interior" class="img-fluid rounded shadow">
+        </div>
+    </div>
+    
+    <div class="row align-items-center mt-5 pt-5">
+        <div class="col-lg-6 order-lg-2">
+            <h2 class="section-title">Delivery Service</h2>
+            <p class="lead">Enjoy our delicious food in the comfort of your home.</p>
+            <p>We understand that sometimes you want restaurant-quality food without leaving your home. That's why we offer a comprehensive delivery service covering the entire metropolitan area.</p>
+            <p>Our delivery team ensures your food arrives hot and fresh, just as if you were dining with us. We use special packaging to maintain temperature and presentation during transit.</p>
+            
+            <div class="mt-4">
+                <h5><i class="bi bi-truck text-primary me-2"></i> Delivery Information</h5>
+                <ul>
+                    <li>Delivery hours: 11:00 AM - 9:30 PM daily</li>
+                    <li>Delivery fee: $3.99 within 5 miles, $5.99 beyond</li>
+                    <li>Minimum order: $25.00</li>
+                    <li>Estimated delivery time: 30-45 minutes</li>
+                </ul>
+                
+                <div class="alert alert-info mt-3">
+                    <i class="bi bi-info-circle-fill me-2"></i> We partner with all major delivery platforms, or you can order directly through our website for the best deals.
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 order-lg-1">
+            <img src="{% static 'images/delivery-service.jpg' %}" alt="Delivery Service" class="img-fluid rounded shadow">
+        </div>
+    </div>
+</div>
+
+<div class="bg-light py-5 mt-5">
+    <div class="container text-center">
+        <h2 class="section-title">Our Team</h2>
+        <p class="lead mb-5">Meet the talented individuals who make Chicha & Chaimo special</p>
+        
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="card border-0 bg-white shadow-sm h-100">
+                    <img src="{% static 'images/chef1.jpg' %}" class="card-img-top" alt="Head Chef">
+                    <div class="card-body">
+                        <h5 class="card-title">Chef Maria Rodriguez</h5>
+                        <p class="text-muted">Head Chef</p>
+                        <p class="card-text">With over 20 years of culinary experience, Chef Maria brings authentic flavors and innovative techniques to our kitchen.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card border-0 bg-white shadow-sm h-100">
+                    <img src="{% static 'images/chef2.jpg' %}" class="card-img-top" alt="Sous Chef">
+                    <div class="card-body">
+                        <h5 class="card-title">Chef James Wilson</h5>
+                        <p class="text-muted">Sous Chef</p>
+                        <p class="card-text">Specializing in contemporary cuisine, Chef James creates the perfect balance between tradition and innovation.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card border-0 bg-white shadow-sm h-100">
+                    <img src="{% static 'images/manager.jpg' %}" class="card-img-top" alt="Restaurant Manager">
+                    <div class="card-body">
+                        <h5 class="card-title">Sarah Johnson</h5>
+                        <p class="text-muted">Restaurant Manager</p>
+                        <p class="card-text">Sarah ensures every guest receives exceptional service and an unforgettable dining experience.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

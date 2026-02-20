@@ -1,0 +1,104 @@
+{% extends "restaurant/kitchen/base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    .order-card { margin-bottom: 20px; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.1); transition: all 0.3s ease; }
+    .order-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.15); }
+    .status-badge { font-size: 0.9rem; padding: 5px 10px; border-radius: 20px; }
+    .status-received { background-color: #ffc107; color: #000; }
+    .status-preparing { background-color: #0d6efd; color: #fff; }
+    .status-ready { background-color: #198754; color: #fff; }
+    .status-delivered { background-color: #6c757d; color: #fff; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-list-check me-2"></i>Kitchen Dashboard</h1>
+    <button class="btn btn-outline-secondary" onclick="window.location.reload()">
+        <i class="bi bi-arrow-clockwise"></i> Refresh
+    </button>
+</div>
+
+<div class="row">
+    {% for order in orders %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card order-card" data-order-id="{{ order.id }}">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><strong>Order #{{ order.id }}</strong></span>
+                <span class="status-badge status-{{ order.status }}" id="status-badge-{{ order.id }}">
+                    {{ order.get_status_display }}
+                </span>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'update_order_status' order.id %}" class="order-form">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <select name="status" class="form-select status-select">
+                            {% for value, label in status_choices %}
+                            <option value="{{ value }}" {% if order.status == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Qty</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in order.items.all %}
+                            <tr>
+                                <td>{{ item.item.name }}</td>
+                                <td>{{ item.quantity }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    <button type="submit" class="btn btn-primary w-100">Update Status</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="alert alert-info text-center">No orders in the kitchen at the moment.</div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-submit on status change
+    document.querySelectorAll('.status-select').forEach(select => {
+        select.addEventListener('change', function() {
+            this.form.submit();
+        });
+    });
+});
+
+// WebSocket connection for real-time updates
+const kitchenSocket = new WebSocket(
+    'ws://' + window.location.host + '/ws/kitchen/'
+);
+
+kitchenSocket.onmessage = function(e) {
+    const data = JSON.parse(e.data);
+    const orderCard = document.querySelector(`.order-card[data-order-id="${data.order_id}"]`);
+    if (orderCard) {
+        const badge = orderCard.querySelector('.status-badge');
+        badge.textContent = data.new_status;
+        // Update class
+        badge.className = badge.className.replace(/status-\S+/, 'status-' + data.status);
+        const select = orderCard.querySelector('.status-select');
+        if (select) select.value = data.status;
+    }
+};
+</script>
+{% endblock %}

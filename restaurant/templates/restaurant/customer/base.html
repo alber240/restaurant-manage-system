@@ -1,0 +1,121 @@
+
+{% extends "restaurant/base.html" %}
+{% load static %}
+
+{% block css %}
+{{ block.super }}
+<!-- Customer-specific CSS -->
+<link rel="stylesheet" href="{% static 'restaurant/css/customer.css' %}">
+{% endblock %}
+
+{% block header %}
+<!-- Customer Navigation -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+        <a class="navbar-brand" href="{% url 'home' %}">
+            <img src="{% static 'restaurant/images/logo.png' %}" alt="Chicha & Chaimo" height="40">
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCustomer">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        
+        <div class="collapse navbar-collapse" id="navbarCustomer">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'menu' %}">Menu</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'about' %}">About Us</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'contact' %}">Contact</a>
+                </li>
+            </ul>
+            
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link position-relative" href="{% url 'view_cart' %}">
+                        <i class="bi bi-cart3"></i>
+                        {% if cart_count > 0 %}
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                            {{ cart_count }}
+                        </span>
+                        {% endif %}
+                    </a>
+                </li>
+                {% if user.is_authenticated %}
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-person-circle"></i> {{ user.username }}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="{% url 'order_history' %}">My Orders</a></li>
+                        <li><a class="dropdown-item" href="{% url 'logout' %}">Logout</a></li>
+                    </ul>
+                </li>
+                {% else %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'login' %}">Login</a>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<!-- Customer Content Wrapper -->
+<div class="customer-wrapper">
+    {% include "restaurant/includes/customer_messages.html" %}
+    
+    <div class="container my-5">
+        {% block customer_content %}
+        <!-- Customer pages will insert their content here -->
+        {% endblock %}
+    </div>
+</div>
+{% endblock %}
+
+{% block footer %}
+<!-- Customer Footer -->
+<footer class="bg-dark text-white py-4">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <h5>Chicha & Chaimo</h5>
+                <p>Experience the finest dining with our authentic cuisine and handcrafted cocktails.</p>
+            </div>
+            <div class="col-md-4 mb-4">
+                <h5>Quick Links</h5>
+                <ul class="list-unstyled">
+                    <li><a href="{% url 'menu' %}" class="text-white">Menu</a></li>
+                    <li><a href="{% url 'about' %}" class="text-white">About Us</a></li>
+                    <li><a href="{% url 'contact' %}" class="text-white">Contact</a></li>
+                </ul>
+            </div>
+            <div class="col-md-4 mb-4">
+                <h5>Connect With Us</h5>
+                <div class="social-links mb-3">
+                    <a href="#" class="text-white me-2"><i class="bi bi-facebook"></i></a>
+                    <a href="#" class="text-white me-2"><i class="bi bi-instagram"></i></a>
+                    <a href="#" class="text-white me-2"><i class="bi bi-tiktok"></i></a>
+                    <a href="#" class="text-white"><i class="bi bi-youtube"></i></a>
+                </div>
+                <p><i class="bi bi-envelope me-2"></i> bigchicha74@gmail.com</p>
+                <p><i class="bi bi-telephone me-2"></i> (123) 456-7890</p>
+            </div>
+        </div>
+        <hr class="my-4 bg-light">
+        <div class="text-center">
+            <p class="mb-0">&copy; 2023 Chicha & Chaimo Restaurant and Bar. All rights reserved.</p>
+        </div>
+    </div>
+</footer>
+{% endblock %}
+
+{% block js %}
+{{ block.super }}
+<!-- Customer-specific JavaScript -->
+<script src="{% static 'restaurant/js/customer.js' %}"></script>
+{% endblock %}

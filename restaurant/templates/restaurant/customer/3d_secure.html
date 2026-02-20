@@ -1,0 +1,28 @@
+{% extends "restaurant/customer/base.html" %}
+{% load static %}
+
+{% block customer_content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-warning text-white">
+                <h3><i class="bi bi-shield-lock me-2"></i>3D Secure Verification</h3>
+            </div>
+            <div class="card-body">
+                <p class="lead">Please complete verification with your bank.</p>
+                <div class="alert alert-info">
+                    <strong>Test Password:</strong> <code>1234</code>
+                </div>
+                <form method="post" action="{% url 'verify_3d_secure' order.id %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="secure_code" class="form-label">Verification Code</label>
+                        <input type="password" name="secure_code" id="secure_code" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Verify Payment</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
