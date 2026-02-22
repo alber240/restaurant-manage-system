@@ -6,17 +6,16 @@ import os
 from pathlib import Path
 import environ
 
+# Build paths inside the project
+BASE_DIR = Path(__file__).resolve().parent.parent
+
 # Initialize environment variables
 env = environ.Env(
     DEBUG=(bool, False),
     MAINTENANCE_MODE=(bool, False),
 )
-
 # Read .env file
-environ.Env.read_env(os.path.join(Path(__file__).resolve().parent.parent, '.env'))
-
-# Build paths inside the project
-BASE_DIR = Path(__file__).resolve().parent.parent
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
 # Security settings
 SECRET_KEY = env('SECRET_KEY')
@@ -69,7 +68,7 @@ CHANNEL_LAYERS = {
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',  # Moved up for static files
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -105,12 +104,10 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'srmssystem.wsgi.application'
 
-# Database
+# Database – use DATABASE_URL from environment, fallback to SQLite
+import dj_database_url
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(default='sqlite:///' + str(BASE_DIR / 'db.sqlite3'))
 }
 
 # Password validation
@@ -149,7 +146,7 @@ LOGOUT_REDIRECT_URL = '/'
 SESSION_COOKIE_AGE = 1209600  # 2 weeks
 SESSION_SAVE_EVERY_REQUEST = True
 
-# Email configuration (from environment)
+# Email configuration
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = env('EMAIL_HOST', default='smtp.gmail.com')
 EMAIL_PORT = env.int('EMAIL_PORT', default=587)
@@ -167,7 +164,12 @@ CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[])
 # Maintenance mode
 MAINTENANCE_MODE = env('MAINTENANCE_MODE')
 
-# Security settings for production (commented, enable when deploying)
+# Paystack keys
+PAYSTACK_SECRET_KEY = env('PAYSTACK_SECRET_KEY')
+PAYSTACK_PUBLIC_KEY = env('PAYSTACK_PUBLIC_KEY')
+SITE_URL = env('SITE_URL', default='http://127.0.0.1:8000')
+
+# Security settings for production (only when DEBUG=False)
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SECURE_SSL_REDIRECT = True
@@ -176,8 +178,3 @@ if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = 'DENY'
-    
-PAYSTACK_SECRET_KEY = env('PAYSTACK_SECRET_KEY')
-PAYSTACK_PUBLIC_KEY = env('PAYSTACK_PUBLIC_KEY')
-
-SITE_URL = env('SITE_URL', default='http://127.0.0.1:8000')
