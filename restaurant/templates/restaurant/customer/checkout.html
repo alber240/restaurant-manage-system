@@ -42,7 +42,7 @@
 
     <div class="col-md-7 order-md-1">
         <h2 class="mb-3">Payment Method</h2>
-        <form method="post" id="payment-form" novalidate>
+        <form method="post" action="{% url 'process_payment' %}" id="payment-form" novalidate>
             {% csrf_token %}
             <input type="hidden" name="payment_method" id="payment-method-input" value="card">
 
@@ -100,7 +100,7 @@
         </form>
     </div>
 </div>
-
+ 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const tabs = document.querySelectorAll('.payment-tab');
@@ -117,7 +117,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Simple validation
+    // Updated validation for both local and international numbers
     document.getElementById('payment-form').addEventListener('submit', function(e) {
         const method = methodInput.value;
         if (method === 'card') {
@@ -127,15 +127,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 e.preventDefault();
             }
         } else if (method === 'mtn') {
-            const phone = document.getElementById('mtn-phone').value;
-            if (!/^07[28]\d{7}$/.test(phone)) {
-                alert('Please enter a valid MTN Rwanda number (078xxxxxxx or 072xxxxxxx)');
+            const phone = document.getElementById('mtn-phone').value.replace(/\s/g, '');
+            // Accept local (078..., 072...) or international (250...)
+            if (!/^(07[28]\d{7}|2507[28]\d{7})$/.test(phone)) {
+                alert('Please enter a valid MTN Rwanda number (e.g., 078xxxxxxx or 25078xxxxxxx)');
                 e.preventDefault();
             }
         } else if (method === 'airtel') {
-            const phone = document.getElementById('airtel-phone').value;
-            if (!/^07[35]\d{7}$/.test(phone)) {
-                alert('Please enter a valid Airtel Rwanda number (073xxxxxxx or 075xxxxxxx)');
+            const phone = document.getElementById('airtel-phone').value.replace(/\s/g, '');
+            // Accept local (073..., 075...) or international (250...)
+            if (!/^(07[35]\d{7}|2507[35]\d{7})$/.test(phone)) {
+                alert('Please enter a valid Airtel Rwanda number (e.g., 073xxxxxxx or 25073xxxxxxx)');
                 e.preventDefault();
             }
         }

@@ -1,0 +1,57 @@
+{% extends "restaurant/staff/base.html" %}
+{% block content %}
+<div class="container-fluid">
+    <h2 class="mb-4">📦 Inventory Management</h2>
+
+    {% if low_stock_items %}
+    <div class="alert alert-warning">
+        <strong>⚠️ Low Stock Alert!</strong> The following items are running low:
+        <ul>
+            {% for item in low_stock_items %}
+            <li>{{ item.name }} – {{ item.stock }} left (threshold: {{ item.low_stock_threshold }})</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Current Stock Levels</h5>
+        </div>
+        <div class="card-body">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Item</th>
+                        <th>Stock</th>
+                        <th>Threshold</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr {% if item.stock <= item.low_stock_threshold %}class="table-danger"{% endif %}>
+                        <td>{{ item.category.name }}</td>
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.stock }}</td>
+                        <td>{{ item.low_stock_threshold }}</td>
+                        <td>
+                            {% if item.stock <= 0 %}
+                                <span class="badge bg-danger">Out of Stock</span>
+                            {% elif item.stock <= item.low_stock_threshold %}
+                                <span class="badge bg-warning">Low Stock</span>
+                            {% else %}
+                                <span class="badge bg-success">OK</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5">No menu items found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

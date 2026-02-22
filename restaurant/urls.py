@@ -1,54 +1,65 @@
-from django.conf import settings
-from django.conf.urls.static import static
 from django.urls import path
 from django.contrib.auth import views as auth_views
-from .views import ProtectedView, StaffOnlyView 
-from . import views
-from restaurant import views
+from django.conf import settings
+from django.conf.urls.static import static
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView  # <-- ADD THIS
+
+from restaurant.views import customer, staff, auth as auth_views_custom, api, payments
 
 urlpatterns = [
     # Main Pages
-    path('', views.home_view, name='home'),
-    path('about/', views.about_view, name='about'),
-    path('contact/', views.contact_view, name='contact'),
-    
+    path('', customer.home_view, name='home'),
+    path('about/', customer.about_view, name='about'),
+    path('contact/', customer.contact_view, name='contact'),
+
     # Authentication
-    path('accounts/register/', views.register, name='register'),
+    path('accounts/register/', auth_views_custom.register, name='register'),
     path('accounts/login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),
     path('accounts/logout/', auth_views.LogoutView.as_view(), name='logout'),
-    
-    path('order/<int:order_id>/3d-secure/', views.verify_3d_secure, name='verify_3d_secure'),
-    
+
     # Menu and Cart
-    path('menu/', views.menu_view, name='menu'),
-    path('add-to-cart/<int:item_id>/', views.add_to_cart, name='add_to_cart'),
-    path('cart/', views.view_cart, name='view_cart'),
-    path('remove-from-cart/<int:item_id>/', views.remove_from_cart, name='remove_from_cart'),
-    path('update-cart/<int:item_id>/', views.update_cart, name='update_cart'),
-    path('cart-count/', views.cart_count, name='cart-count'),
-    
+    path('menu/', customer.menu_view, name='menu'),
+    path('add-to-cart/<int:item_id>/', customer.add_to_cart, name='add_to_cart'),
+    path('cart/', customer.view_cart, name='view_cart'),
+    path('remove-from-cart/<int:item_id>/', customer.remove_from_cart, name='remove_from_cart'),
+    path('update-cart/<int:item_id>/', customer.update_cart, name='update_cart'),
+    path('cart-count/', customer.cart_count, name='cart-count'),
+
     # Checkout and Orders
-    path('checkout/', views.checkout, name='checkout'),
-    path('orders/', views.order_history, name='order_history'),
-    
+    path('checkout/', customer.checkout, name='checkout'),
+    path('process-payment/', payments.process_payment, name='process_payment'),
+    path('orders/', customer.order_history, name='order_history'),
+    path('order/<int:order_id>/confirmation/', customer.order_confirmation, name='order_confirmation'),
+    path('order/<int:order_id>/payment/', customer.order_payment, name='order_payment'),
+    path('order/<int:order_id>/3d-secure/', customer.verify_3d_secure, name='verify_3d_secure'),
+
     # Staff Views
-    path('kitchen/', views.kitchen_dashboard, name='kitchen'),
-    path('waiter/', views.waiter_dashboard, name='waiter'),
-    path('update-status/<int:order_id>/', views.update_order_status, name='update_order_status'),
-    
+    path('kitchen/', staff.kitchen_dashboard, name='kitchen'),
+    path('waiter/', staff.waiter_dashboard, name='waiter'),
+    path('update-status/<int:order_id>/', staff.update_order_status, name='update_order_status'),
+    path('sales-report/', staff.sales_report, name='sales_report'),
+
     # Reservations
-    path('reservation/', views.create_reservation, name='reservation'),
-    path('reservation/confirm/', views.reservation_success, name='reservation_success'),
-    
+    path('reservation/', customer.create_reservation, name='reservation'),
+    path('reservation/success/', customer.reservation_success, name='reservation_success'),
+
+    # API endpoints
+    path('api/protected-endpoint/', api.ProtectedView.as_view(), name='protected-endpoint'),
+    path('api/staff-dashboard/', api.StaffOnlyView.as_view(), name='api_staff_dashboard'),
+    path('api/logout/', api.LogoutView.as_view(), name='api_logout'),
+
+    # JWT tokens
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('payment/callback/', payments.payment_callback, name='payment_callback'),
     # Debug
-    path('debug-menu/', views.debug_menu, name='debug_menu'),
+    path('debug-menu/', customer.debug_menu, name='debug_menu'),
     
-    path('order/<int:order_id>/payment/', views.order_payment, name='order_payment'),
+    #inventory
+    path('staff/inventory/', staff.inventory_dashboard, name='inventory_dashboard'),
     
-    path('api/protected-endpoint/', ProtectedView.as_view(), name='protected-endpoint'),
-    
-    # urls.py
-   path('api/staff-dashboard/', StaffOnlyView.as_view()),
+    #manage dashboard url
+    path('staff/manager/', staff.manager_dashboard, name='manager_dashboard'),
 ]
 
 if settings.DEBUG:

@@ -3,7 +3,9 @@ from django.dispatch import receiver
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
-from .models import Order
+
+from restaurant.services import inventory
+from .models import Order, User
 from .utils.email import send_email  # Your custom email utility
 
 @receiver(post_save, sender=Order)
@@ -23,6 +25,14 @@ def handle_order_notifications(sender, instance, created, **kwargs):
         # Payment status changed to 'completed' after creation
         if hasattr(instance, 'tracker') and instance.tracker.has_changed('payment_status') and instance.payment_status == 'completed':
             send_payment_receipt(instance)
+            
+            for order_item in instance.items.all():
+               if inventory.check_low_stock(order_item.item):
+                send_low_stock_alert(order_item.item)
+            
+        
+            
+    
 
 
 def send_order_confirmation(order):
@@ -76,3 +86,11 @@ def send_payment_receipt(order):
         template_name='restaurant/emails/payment_receipt.html',
         context=context
     )
+    
+def send_low_stock_alert(item):
+    subject = f"⚠️ Low Stock Alert: {item.name}"
+    context = {'item': item}
+    # Send to staff emails (you need a list of staff emails)
+    staff_emails = User.objects.filter(is_staff=True).values_list('email', flat=True)
+    for email in staff_emails:
+        send_email(subject, email, 'restaurant/emails/low_stock_alert.html', context)

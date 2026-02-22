@@ -1,0 +1,131 @@
+{% extends "restaurant/staff/base.html" %}
+{% load static %}
+{% block content %}
+<div class="container-fluid">
+    <h2 class="mb-4">📊 Manager Dashboard</h2>
+
+    <!-- Revenue Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card text-white bg-primary">
+                <div class="card-body">
+                    <h5 class="card-title">Today</h5>
+                    <p class="display-6">${{ revenue.today|floatformat:2 }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <h5 class="card-title">This Week</h5>
+                    <p class="display-6">${{ revenue.week|floatformat:2 }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-info">
+                <div class="card-body">
+                    <h5 class="card-title">This Month</h5>
+                    <p class="display-6">${{ revenue.month|floatformat:2 }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Daily Sales Chart -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    Daily Sales (Last 7 Days)
+                </div>
+                <div class="card-body">
+                    <canvas id="salesChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    Popular Items
+                </div>
+                <ul class="list-group list-group-flush">
+                    {% for item in popular_items %}
+                    <li class="list-group-item d-flex justify-content-between">
+                        {{ item.item__name }}
+                        <span class="badge bg-primary rounded-pill">{{ item.total_quantity }} sold</span>
+                    </li>
+                    {% empty %}
+                    <li class="list-group-item">No sales yet</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Orders -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    Recent Orders
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Order #</th>
+                                <th>Customer</th>
+                                <th>Date</th>
+                                <th>Total</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in recent_orders %}
+                            <tr>
+                                <td>{{ order.id }}</td>
+                                <td>{{ order.user.get_full_name|default:order.user.username }}</td>
+                                <td>{{ order.created_at|date:"M d, H:i" }}</td>
+                                <td>${{ order.total }}</td>
+                                <td>{{ order.get_status_display }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="5">No orders yet</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Prepare chart data from Django context
+const ctx = document.getElementById('salesChart').getContext('2d');
+const salesData = {{ daily_sales|safe }};
+const labels = salesData.map(d => d.date);
+const data = salesData.map(d => d.total);
+
+new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: labels,
+        datasets: [{
+            label: 'Sales ($)',
+            data: data,
+            borderColor: 'rgba(75, 192, 192, 1)',
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            tension: 0.1
+        }]
+    },
+    options: {
+        responsive: true,
+        scales: {
+            y: { beginAtZero: true }
+        }
+    }
+});
+</script>
+{% endblock %}

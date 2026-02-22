@@ -26,6 +26,7 @@ class MenuItem(models.Model):
     stock = models.PositiveIntegerField(default=0)
     category = models.ForeignKey(MenuCategory, on_delete=models.CASCADE, related_name='menu_items')
     image = models.ImageField(upload_to='menu_images/', null=True, blank=True)
+    low_stock_threshold = models.PositiveIntegerField(default=5, help_text="Alert when stock falls below this number")
 
     class Meta:
         ordering = ['name']
