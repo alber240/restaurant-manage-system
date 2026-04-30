@@ -108,14 +108,27 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'srmssystem.wsgi.application'
 
+# Comment out PostgreSQL and add MySQL settings
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'restaurant_db',
+#         'USER': 'postgres',
+#         'PASSWORD': 'BIGchicha,,2015',
+#         'HOST': 'localhost',
+#         'PORT': '5433',
+#     }
+# }
+
+# Add this for PythonAnywhere
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'restaurant_db',
-        'USER': 'postgres',
-        'PASSWORD': 'BIGchicha,,2015',  # Use the password you set during PostgreSQL installation
-        'HOST': 'localhost',
-        'PORT': '5433',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'restaurant_db$default',  # PythonAnywhere format
+        'USER': 'restaurant_db',          # Your PythonAnywhere username
+        'PASSWORD': 'your_mysql_password',
+        'HOST': 'restaurant_db.mysql.pythonanywhere-services.com',
+        'PORT': '3306',
     }
 }
 
