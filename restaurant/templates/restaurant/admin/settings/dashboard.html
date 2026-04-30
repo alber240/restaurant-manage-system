@@ -1,0 +1,154 @@
+{% extends 'restaurant/base.html' %}
+{% load static %}
+
+{% block title %}Settings Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>
+            <i class="fas fa-cog me-2"></i>Restaurant Settings
+        </h1>
+        <div>
+            <a href="{% url 'admin_dashboard' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- General Settings Card -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-store me-2"></i>General Settings</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Manage restaurant information, business hours, and basic configurations.</p>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-check-circle text-success me-2"></i>Restaurant Name & Contact</li>
+                        <li><i class="fas fa-check-circle text-success me-2"></i>Business Hours</li>
+                        <li><i class="fas fa-check-circle text-success me-2"></i>Currency Settings</li>
+                    </ul>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <a href="{% url 'settings_general' %}" class="btn btn-primary w-100">
+                        <i class="fas fa-edit me-1"></i>Configure General
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delivery Settings Card -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-truck me-2"></i>Delivery Settings</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Configure delivery radius, fees, minimum orders, and delivery options.</p>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-check-circle text-success me-2"></i>Delivery Radius & Fees</li>
+                        <li><i class="fas fa-check-circle text-success me-2"></i>Minimum Order Amounts</li>
+                        <li><i class="fas fa-check-circle text-success me-2"></i>Delivery Time Estimates</li>
+                    </ul>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <a href="{% url 'settings_delivery' %}" class="btn btn-success w-100">
+                        <i class="fas fa-edit me-1"></i>Configure Delivery
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Settings Card -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-credit-card me-2"></i>Payment Settings</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Manage payment methods, tax rates, and service charges.</p>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-check-circle text-success me-2"></i>Payment Methods</li>
+                        <li><i class="fas fa-check-circle text-success me-2"></i>Tax & Service Charges</li>
+                        <li><i class="fas fa-check-circle text-success me-2"></i>Currency Configuration</li>
+                    </ul>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <a href="{% url 'settings_payment' %}" class="btn btn-info text-white w-100">
+                        <i class="fas fa-edit me-1"></i>Configure Payment
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tip Settings Card -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="fas fa-dollar-sign me-2"></i>Tip Settings</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Configure tip options, percentages, and distribution methods.</p>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-check-circle text-success me-2"></i>Suggested Tip Percentages</li>
+                        <li><i class="fas fa-check-circle text-success me-2"></i>Tip Distribution Rules</li>
+                        <li><i class="fas fa-check-circle text-success me-2"></i>Enable/Disable Tips</li>
+                    </ul>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <a href="{% url 'settings_tip' %}" class="btn btn-warning w-100">
+                        <i class="fas fa-edit me-1"></i>Configure Tips
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- QR Code Management Card -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="fas fa-qrcode me-2"></i>QR Code Management</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Generate and manage QR codes for restaurant tables.</p>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-check-circle text-success me-2"></i>Generate Table QR Codes</li>
+                        <li><i class="fas fa-check-circle text-success me-2"></i>Print QR Codes</li>
+                        <li><i class="fas fa-check-circle text-success me-2"></i>Bulk Generation</li>
+                    </ul>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <a href="{% url 'settings_qr_codes' %}" class="btn btn-dark w-100">
+                        <i class="fas fa-qrcode me-1"></i>Manage QR Codes
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Current Settings Summary Card -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Current Settings</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Restaurant:</strong> {{ settings.restaurant_name }}</p>
+                    <p><strong>Delivery:</strong> {% if settings.enable_delivery %}Enabled{% else %}Disabled{% endif %}</p>
+                    <p><strong>Delivery Fee:</strong> 
+                        {% if settings.delivery_fee_type == 'fixed' %}
+                            ${{ settings.delivery_fee_amount }}
+                        {% elif settings.delivery_fee_type == 'distance' %}
+                            ${{ settings.delivery_fee_per_km }}/km
+                        {% else %}
+                            {{ settings.delivery_fee_percentage }}% of order
+                        {% endif %}
+                    </p>
+                    <p><strong>Tips:</strong> {% if settings.enable_tips %}Enabled{% else %}Disabled{% endif %}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

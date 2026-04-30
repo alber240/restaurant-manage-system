@@ -20,7 +20,14 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 # Security settings
 SECRET_KEY = env('SECRET_KEY')
 DEBUG = env('DEBUG')
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1'])
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[
+    'localhost',
+    '127.0.0.1',
+    '10.118.23.245',
+    '10.118.23.131',
+    
+    
+    ])
 
 # Application definition
 INSTALLED_APPS = [
@@ -59,10 +66,7 @@ ASGI_APPLICATION = 'srmssystem.asgi.application'
 
 CHANNEL_LAYERS = {
     'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-            "hosts": [("127.0.0.1", 6379)],
-        },
+        'BACKEND': 'channels.layers.InMemoryChannelLayer'
     },
 }
 
@@ -104,10 +108,15 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'srmssystem.wsgi.application'
 
-# Database – use DATABASE_URL from environment, fallback to SQLite
-import dj_database_url
 DATABASES = {
-    'default': dj_database_url.config(default='sqlite:///' + str(BASE_DIR / 'db.sqlite3'))
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'restaurant_db',
+        'USER': 'postgres',
+        'PASSWORD': 'BIGchicha,,2015',  # Use the password you set during PostgreSQL installation
+        'HOST': 'localhost',
+        'PORT': '5433',
+    }
 }
 
 # Password validation
@@ -141,6 +150,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/menu/'
 LOGOUT_REDIRECT_URL = '/'
+LOGIN_REDIRECT_URL = '/dashboard-redirect/'
 
 # Session settings
 SESSION_COOKIE_AGE = 1209600  # 2 weeks

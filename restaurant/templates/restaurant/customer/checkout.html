@@ -1,147 +1,220 @@
-{% extends "restaurant/customer/base.html" %}
+{% extends 'restaurant/base.html' %}
 {% load static %}
 
+{% block title %}Checkout{% endblock %}
+
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'restaurant/css/checkout.css' %}">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
-    /* Payment method styles (same as before) */
-    .payment-methods { margin: 20px 0; }
-    .payment-tabs { display: flex; border-bottom: 1px solid #ddd; margin-bottom: 20px; }
-    .payment-tab { padding: 10px 20px; cursor: pointer; border: 1px solid transparent; }
-    .payment-tab.active { border: 1px solid #ddd; border-bottom: 1px solid white; margin-bottom: -1px; font-weight: bold; background: #f8f9fa; }
-    .payment-form { display: none; }
-    .payment-form.active { display: block; }
-    .momo-input { margin-top: 15px; }
+    #location-map {
+        height: 300px;
+        border-radius: 10px;
+        margin-top: 10px;
+    }
+    .order-type-card {
+        cursor: pointer;
+        transition: all 0.3s;
+        border: 2px solid transparent;
+    }
+    .order-type-card:hover {
+        transform: translateY(-3px);
+    }
+    .order-type-card.selected {
+        border-color: #c52e2e;
+        background-color: #fff5f5;
+    }
+    .delivery-fee {
+        font-size: 14px;
+        color: #666;
+    }
 </style>
 {% endblock %}
 
-{% block customer_content %}
-<div class="row">
-    <div class="col-md-5 order-md-2 mb-4">
-        <div class="card">
-            <div class="card-header bg-primary text-white">
-                <h4 class="mb-0">Order Summary</h4>
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-md-7">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-clipboard-list me-2"></i>Order Summary</h4>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Quantity</th>
+                                    <th>Price</th>
+                                    <th>Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in cart_items %}
+                                <tr>
+                                    <td>{{ item.item.name }}</td>
+                                    <td>{{ item.quantity }}</td>
+                                    <td>${{ item.item.price }}</td>
+                                    <td>${{ item.subtotal }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-active">
+                                    <th colspan="3" class="text-end">Subtotal:</th>
+                                    <th>${{ cart.total }}</th>
+                                </tr>
+                                <tr id="deliveryFeeRow" style="display: none;">
+                                    <th colspan="3" class="text-end">Delivery Fee:</th>
+                                    <th id="deliveryFeeAmount">$0.00</th>
+                                </tr>
+                                <tr class="table-success">
+                                    <th colspan="3" class="text-end">Total:</th>
+                                    <th id="grandTotal">${{ cart.total }}</th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
             </div>
-            <div class="card-body">
-                <ul class="list-group list-group-flush">
-                    {% for item in cart_items %}
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span>{{ item.item.name }} × {{ item.quantity }}</span>
-                        <span>${{ item.subtotal }}</span>
-                    </li>
-                    {% endfor %}
-                </ul>
-                <hr>
-                <div class="d-flex justify-content-between fw-bold fs-5">
-                    <span>Total:</span>
-                    <span>${{ cart.total }}</span>
+        </div>
+
+        <div class="col-md-5">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-info-circle me-2"></i>Order Details</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="checkoutForm">
+                        {% csrf_token %}
+                        
+                        <!-- Order Type Selection -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Order Type</label>
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="card order-type-card text-center p-3" data-type="dine_in">
+                                        <i class="fas fa-utensils fa-2x mb-2 text-primary"></i>
+                                        <h6>Dine In</h6>
+                                        <small class="text-muted">Pay at table</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="card order-type-card text-center p-3" data-type="delivery">
+                                        <i class="fas fa-truck fa-2x mb-2 text-success"></i>
+                                        <h6>Delivery</h6>
+                                        <small class="text-muted">To your door</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <input type="hidden" name="order_type" id="orderType" value="dine_in">
+                        </div>
+
+                        <!-- Delivery Details (hidden by default) -->
+                        <div id="deliverySection" style="display: none;">
+                            <div class="mb-3">
+                                <label class="form-label">Delivery Address *</label>
+                                <textarea name="delivery_address" class="form-control" rows="2" placeholder="Street, building, apartment"></textarea>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Phone Number *</label>
+                                <input type="tel" name="delivery_phone" class="form-control" placeholder="Your phone number">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Delivery Instructions (Optional)</label>
+                                <textarea name="delivery_instruction" class="form-control" rows="2" placeholder="Gate code, landmark, etc."></textarea>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-map-marker-alt me-1 text-danger"></i>Drop a pin on the map
+                                </label>
+                                <div id="location-map"></div>
+                                <input type="hidden" name="latitude" id="latitude">
+                                <input type="hidden" name="longitude" id="longitude">
+                                <small class="text-muted">Click on the map to set your exact delivery location</small>
+                            </div>
+                        </div>
+
+                        <!-- Payment Method -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Payment Method</label>
+                            <select name="payment_method" class="form-select" required>
+                                <option value="cash">💵 Cash on Delivery</option>
+                                <option value="card">💳 Credit/Debit Card</option>
+                                <option value="mtn">📱 MTN Mobile Money</option>
+                                <option value="airtel">📱 Airtel Money</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn btn-success w-100 py-2">
+                            <i class="fas fa-check-circle me-2"></i>Place Order
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
-
-    <div class="col-md-7 order-md-1">
-        <h2 class="mb-3">Payment Method</h2>
-        <form method="post" action="{% url 'process_payment' %}" id="payment-form" novalidate>
-            {% csrf_token %}
-            <input type="hidden" name="payment_method" id="payment-method-input" value="card">
-
-            <div class="payment-methods">
-                <div class="payment-tabs">
-                    <div class="payment-tab active" data-method="card">💳 Card</div>
-                    <div class="payment-tab" data-method="mtn">📱 MTN MoMo</div>
-                    <div class="payment-tab" data-method="airtel">📱 Airtel Money</div>
-                </div>
-
-                <!-- Card Form -->
-                <div class="payment-form active" id="card-form">
-                    <div class="mb-3">
-                        <label for="card-number" class="form-label">Card Number</label>
-                        <input type="text" class="form-control" id="card-number" name="card_number" placeholder="1234 5678 9012 3456">
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="expiry-date" class="form-label">Expiry Date</label>
-                            <input type="text" class="form-control" id="expiry-date" name="expiry_date" placeholder="MM/YY">
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="cvv" class="form-label">CVV</label>
-                            <input type="text" class="form-control" id="cvv" name="cvv" placeholder="123">
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="name-on-card" class="form-label">Name on Card</label>
-                        <input type="text" class="form-control" id="name-on-card" name="card_name">
-                    </div>
-                </div>
-
-                <!-- MTN Form -->
-                <div class="payment-form" id="mtn-form">
-                    <div class="mb-3">
-                        <p class="text-muted">You'll be redirected to MTN MoMo to complete payment.</p>
-                        <label for="mtn-phone" class="form-label">MTN Phone Number</label>
-                        <input type="tel" class="form-control" id="mtn-phone" name="mtn_phone" placeholder="0781234567" pattern="07[28][0-9]{7}">
-                    </div>
-                </div>
-
-                <!-- Airtel Form -->
-                <div class="payment-form" id="airtel-form">
-                    <div class="mb-3">
-                        <p class="text-muted">You'll be redirected to Airtel Money to complete payment.</p>
-                        <label for="airtel-phone" class="form-label">Airtel Phone Number</label>
-                        <input type="tel" class="form-control" id="airtel-phone" name="airtel_phone" placeholder="0731234567" pattern="07[35][0-9]{7}">
-                    </div>
-                </div>
-            </div>
-
-            <hr class="my-4">
-            <button class="btn btn-primary btn-lg w-100" type="submit">Complete Payment</button>
-            <p class="text-muted small mt-3"><i class="bi bi-lock"></i> Your payment details are securely processed. We don't store card information.</p>
-        </form>
-    </div>
 </div>
- 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const tabs = document.querySelectorAll('.payment-tab');
-    const methodInput = document.getElementById('payment-method-input');
 
-    tabs.forEach(tab => {
-        tab.addEventListener('click', function() {
-            tabs.forEach(t => t.classList.remove('active'));
-            this.classList.add('active');
-            const method = this.dataset.method;
-            document.querySelectorAll('.payment-form').forEach(form => form.classList.remove('active'));
-            document.getElementById(method + '-form').classList.add('active');
-            methodInput.value = method;
+<script>
+    let map;
+    let marker;
+    
+    // Order type selection
+    document.querySelectorAll('.order-type-card').forEach(card => {
+        card.addEventListener('click', function() {
+            document.querySelectorAll('.order-type-card').forEach(c => c.classList.remove('selected'));
+            this.classList.add('selected');
+            
+            const type = this.dataset.type;
+            document.getElementById('orderType').value = type;
+            
+            if (type === 'delivery') {
+                document.getElementById('deliverySection').style.display = 'block';
+                document.getElementById('deliveryFeeRow').style.display = 'table-row';
+                setTimeout(initMap, 100);
+            } else {
+                document.getElementById('deliverySection').style.display = 'none';
+                document.getElementById('deliveryFeeRow').style.display = 'none';
+                document.getElementById('grandTotal').innerHTML = `$${{ cart.total }}`;
+            }
         });
     });
-
-    // Updated validation for both local and international numbers
-    document.getElementById('payment-form').addEventListener('submit', function(e) {
-        const method = methodInput.value;
-        if (method === 'card') {
-            const cardNum = document.getElementById('card-number').value.replace(/\s/g, '');
-            if (!/^\d{16}$/.test(cardNum)) {
-                alert('Please enter a valid 16-digit card number');
-                e.preventDefault();
+    
+    // Initialize map for location picking
+    function initMap() {
+        if (map) return;
+        
+        // Default center (Kigali, Rwanda)
+        map = L.map('location-map').setView([-1.9441, 30.0619], 13);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+        
+        map.on('click', function(e) {
+            if (marker) {
+                map.removeLayer(marker);
             }
-        } else if (method === 'mtn') {
-            const phone = document.getElementById('mtn-phone').value.replace(/\s/g, '');
-            // Accept local (078..., 072...) or international (250...)
-            if (!/^(07[28]\d{7}|2507[28]\d{7})$/.test(phone)) {
-                alert('Please enter a valid MTN Rwanda number (e.g., 078xxxxxxx or 25078xxxxxxx)');
-                e.preventDefault();
-            }
-        } else if (method === 'airtel') {
-            const phone = document.getElementById('airtel-phone').value.replace(/\s/g, '');
-            // Accept local (073..., 075...) or international (250...)
-            if (!/^(07[35]\d{7}|2507[35]\d{7})$/.test(phone)) {
-                alert('Please enter a valid Airtel Rwanda number (e.g., 073xxxxxxx or 25073xxxxxxx)');
-                e.preventDefault();
-            }
-        }
-    });
-});
+            marker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(map);
+            document.getElementById('latitude').value = e.latlng.lat;
+            document.getElementById('longitude').value = e.latlng.lng;
+            
+            // Calculate delivery fee (mock - you can implement real distance calculation)
+            const deliveryFee = 3.00;
+            document.getElementById('deliveryFeeAmount').innerHTML = `$${deliveryFee}`;
+            const subtotal = {{ cart.total|default:0 }};
+            const total = subtotal + deliveryFee;
+            document.getElementById('grandTotal').innerHTML = `$${total.toFixed(2)}`;
+            document.getElementById('deliveryFeeAmount').closest('tr').dataset.fee = deliveryFee;
+        });
+    }
+    
+    // Default select dine-in
+    document.querySelector('.order-type-card[data-type="dine_in"]').click();
 </script>
 {% endblock %}

@@ -1,0 +1,143 @@
+{% extends 'restaurant/base.html' %}
+{% load static %}
+
+{% block title %}Delivery Settings{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h3 class="mb-0">
+                        <i class="fas fa-truck me-2"></i>Delivery Settings
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-12">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" name="enable_delivery" 
+                                           id="enableDelivery" {% if settings.enable_delivery %}checked{% endif %}>
+                                    <label class="form-check-label fs-5" for="enableDelivery">
+                                        <strong>Enable Delivery Service</strong>
+                                    </label>
+                                    <p class="text-muted mt-2">Turn on/off delivery functionality for online orders.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <h4 class="mb-3">Delivery Area Settings</h4>
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label">Maximum Delivery Radius (km)</label>
+                                <div class="input-group">
+                                    <input type="number" name="delivery_radius_km" class="form-control" 
+                                           value="{{ settings.delivery_radius_km }}" step="0.5">
+                                    <span class="input-group-text">km</span>
+                                </div>
+                                <small class="text-muted">Maximum distance we deliver to.</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Minimum Order for Delivery</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">{{ settings.currency_symbol }}</span>
+                                    <input type="number" name="min_order_for_delivery" class="form-control" 
+                                           value="{{ settings.min_order_for_delivery }}" step="0.01">
+                                </div>
+                                <small class="text-muted">Minimum order amount to qualify for delivery.</small>
+                            </div>
+                        </div>
+                        
+                        <h4 class="mb-3">Delivery Fee Settings</h4>
+                        <div class="row mb-4">
+                            <div class="col-md-12">
+                                <label class="form-label">Delivery Fee Type</label>
+                                <select name="delivery_fee_type" class="form-select" id="feeType">
+                                    <option value="fixed" {% if settings.delivery_fee_type == 'fixed' %}selected{% endif %}>Fixed Fee</option>
+                                    <option value="distance" {% if settings.delivery_fee_type == 'distance' %}selected{% endif %}>Distance Based</option>
+                                    <option value="percentage" {% if settings.delivery_fee_type == 'percentage' %}selected{% endif %}>Percentage of Order</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-4" id="fixedFeeDiv">
+                            <div class="col-md-6">
+                                <label class="form-label">Fixed Delivery Fee</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">{{ settings.currency_symbol }}</span>
+                                    <input type="number" name="delivery_fee_amount" class="form-control" 
+                                           value="{{ settings.delivery_fee_amount }}" step="0.01">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-4" id="distanceFeeDiv" style="display: none;">
+                            <div class="col-md-6">
+                                <label class="form-label">Fee per Kilometer</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">{{ settings.currency_symbol }}</span>
+                                    <input type="number" name="delivery_fee_per_km" class="form-control" 
+                                           value="{{ settings.delivery_fee_per_km }}" step="0.10">
+                                    <span class="input-group-text">per km</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label">Free Delivery Minimum</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">{{ settings.currency_symbol }}</span>
+                                    <input type="number" name="free_delivery_minimum" class="form-control" 
+                                           value="{{ settings.free_delivery_minimum }}" step="0.01">
+                                </div>
+                                <small class="text-muted">Orders above this amount get free delivery. Set to 0 to disable.</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Estimated Delivery Time</label>
+                                <input type="text" name="estimated_delivery_time" class="form-control" 
+                                       value="{{ settings.estimated_delivery_time }}" placeholder="e.g., 30-45 minutes">
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{% url 'settings_dashboard' %}" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-success">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Show/hide fee fields based on fee type
+    const feeType = document.getElementById('feeType');
+    const fixedDiv = document.getElementById('fixedFeeDiv');
+    const distanceDiv = document.getElementById('distanceFeeDiv');
+    
+    function updateFeeFields() {
+        const selected = feeType.value;
+        if (selected === 'fixed') {
+            fixedDiv.style.display = 'flex';
+            distanceDiv.style.display = 'none';
+        } else if (selected === 'distance') {
+            fixedDiv.style.display = 'none';
+            distanceDiv.style.display = 'flex';
+        } else {
+            fixedDiv.style.display = 'none';
+            distanceDiv.style.display = 'none';
+        }
+    }
+    
+    feeType.addEventListener('change', updateFeeFields);
+    updateFeeFields();
+</script>
+{% endblock %}

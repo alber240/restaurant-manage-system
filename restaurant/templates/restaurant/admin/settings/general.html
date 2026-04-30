@@ -1,0 +1,96 @@
+{% extends 'restaurant/base.html' %}
+{% load static %}
+
+{% block title %}General Settings{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">
+                        <i class="fas fa-store me-2"></i>General Settings
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <h4 class="mb-3">Restaurant Information</h4>
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label">Restaurant Name *</label>
+                                <input type="text" name="restaurant_name" class="form-control" 
+                                       value="{{ settings.restaurant_name }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Restaurant Phone *</label>
+                                <input type="tel" name="restaurant_phone" class="form-control" 
+                                       value="{{ settings.restaurant_phone }}" required>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label">Restaurant Email *</label>
+                                <input type="email" name="restaurant_email" class="form-control" 
+                                       value="{{ settings.restaurant_email }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Restaurant Address *</label>
+                                <textarea name="restaurant_address" class="form-control" rows="2" required>{{ settings.restaurant_address }}</textarea>
+                            </div>
+                        </div>
+                        
+                        <h4 class="mb-3">Currency Settings</h4>
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label">Currency Symbol</label>
+                                <input type="text" name="currency_symbol" class="form-control" 
+                                       value="{{ settings.currency_symbol }}" maxlength="5">
+                                <small class="text-muted">e.g., $, €, £, ₦, RWF</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Currency Code</label>
+                                <input type="text" name="currency_code" class="form-control" 
+                                       value="{{ settings.currency_code }}" maxlength="10">
+                                <small class="text-muted">e.g., USD, EUR, GBP, NGN, RWF</small>
+                            </div>
+                        </div>
+                        
+                        <h4 class="mb-3">Business Hours</h4>
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label">Opening Time</label>
+                                <input type="time" name="opening_time" class="form-control" 
+                                       value="{{ settings.opening_time|time:'H:i' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Closing Time</label>
+                                <input type="time" name="closing_time" class="form-control" 
+                                       value="{{ settings.closing_time|time:'H:i' }}">
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-12">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Business hours for each day of the week are configured here. 
+                                    We'll add daily open/close settings later if needed.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{% url 'settings_dashboard' %}" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

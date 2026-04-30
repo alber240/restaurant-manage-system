@@ -1,0 +1,314 @@
+{% extends 'restaurant/base.html' %}
+{% load static %}
+
+{% block title %}Track Order #{{ order.id }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+    .tracking-steps {
+        display: flex;
+        justify-content: space-between;
+        margin: 30px 0;
+        flex-wrap: wrap;
+    }
+    .step {
+        text-align: center;
+        flex: 1;
+        position: relative;
+        min-width: 80px;
+    }
+    .step .circle {
+        width: 40px;
+        height: 40px;
+        background-color: #ddd;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 10px;
+        font-weight: bold;
+    }
+    .step.active .circle {
+        background-color: #c52e2e;
+        color: white;
+    }
+    .step.completed .circle {
+        background-color: #28a745;
+        color: white;
+    }
+    .step .label {
+        font-size: 12px;
+        color: #666;
+    }
+    .step.active .label {
+        color: #c52e2e;
+        font-weight: bold;
+    }
+    .step.completed .label {
+        color: #28a745;
+    }
+    .tracking-map {
+        height: 400px;
+        border-radius: 10px;
+        margin-top: 20px;
+    }
+    .status-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 15px;
+        margin-bottom: 20px;
+    }
+    .driver-info {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 10px;
+        margin-top: 15px;
+    }
+    .delivery-details {
+        background-color: white;
+        padding: 15px;
+        border-radius: 10px;
+        border-left: 4px solid #c52e2e;
+    }
+    .no-driver-message {
+        text-align: center;
+        padding: 40px;
+        background-color: #f8f9fa;
+        border-radius: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <!-- Status Card -->
+            <div class="status-card text-center">
+                <h3 class="mb-2">Order #{{ order.id }}</h3>
+                <p class="mb-0">{{ order.created_at|date:"F j, Y g:i A" }}</p>
+                <div class="mt-3">
+                    <span class="badge bg-light text-dark fs-6">
+                        {{ order.get_status_display }}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Tracking Steps -->
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title mb-4">Delivery Status</h5>
+                    <div class="tracking-steps">
+                        <div class="step {% if order.status != 'pending' %}completed{% else %}{% if order.status == 'confirmed' %}active{% endif %}{% endif %}">
+                            <div class="circle"><i class="fas fa-check"></i></div>
+                            <div class="label">Order Confirmed</div>
+                        </div>
+                        <div class="step {% if order.delivery_status == 'assigned' or order.delivery_status == 'accepted' %}active{% elif order.delivery_status == 'picked_up' or order.delivery_status == 'en_route' or order.delivery_status == 'delivered' %}completed{% endif %}">
+                            <div class="circle"><i class="fas fa-user-check"></i></div>
+                            <div class="label">Driver Assigned</div>
+                        </div>
+                        <div class="step {% if order.delivery_status == 'picked_up' %}active{% elif order.delivery_status == 'en_route' or order.delivery_status == 'delivered' %}completed{% endif %}">
+                            <div class="circle"><i class="fas fa-box"></i></div>
+                            <div class="label">Picked Up</div>
+                        </div>
+                        <div class="step {% if order.delivery_status == 'en_route' %}active{% elif order.delivery_status == 'delivered' %}completed{% endif %}">
+                            <div class="circle"><i class="fas fa-road"></i></div>
+                            <div class="label">En Route</div>
+                        </div>
+                        <div class="step {% if order.delivery_status == 'delivered' %}completed{% endif %}">
+                            <div class="circle"><i class="fas fa-home"></i></div>
+                            <div class="label">Delivered</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Delivery Details -->
+            <div class="card shadow-sm mt-4">
+                <div class="card-body">
+                    <h5 class="card-title">Delivery Information</h5>
+                    <div class="delivery-details">
+                        <p class="mb-1"><strong>Delivery Address:</strong> {{ order.delivery_address }}</p>
+                        <p class="mb-1"><strong>Phone:</strong> {{ order.delivery_phone }}</p>
+                        {% if order.delivery_instruction %}
+                        <p class="mb-1"><strong>Instructions:</strong> {{ order.delivery_instruction }}</p>
+                        {% endif %}
+                        <p class="mb-0"><strong>Delivery Fee:</strong> ${{ order.delivery_fee }}</p>
+                    </div>
+
+                    <!-- Driver Info (only if assigned) -->
+                    {% if order.driver %}
+                    <div class="driver-info">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-truck fa-2x text-primary me-3"></i>
+                            <div>
+                                <h6 class="mb-0">Driver: {{ order.driver.user.username }}</h6>
+                                <small class="text-muted">Vehicle: {{ order.driver.get_vehicle_type_display }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning mt-3 mb-0">
+                        <i class="fas fa-clock me-2"></i>
+                        Waiting for driver assignment. A driver will be assigned to your order shortly.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Live Map (only if driver assigned AND has location) -->
+            {% if order.driver and order.delivery_latitude and order.delivery_longitude %}
+            <div class="card shadow-sm mt-4">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-map-marker-alt text-danger me-2"></i>Live Driver Location
+                    </h5>
+                    <div id="tracking-map" class="tracking-map"></div>
+                    <small class="text-muted">Map updates every 10 seconds</small>
+                </div>
+            </div>
+            {% elif order.driver %}
+            <div class="card shadow-sm mt-4">
+                <div class="card-body">
+                    <div class="alert alert-info text-center mb-0">
+                        <i class="fas fa-map-marker-alt fa-2x mb-2 d-block"></i>
+                        <p class="mb-0">Driver assigned but location sharing is not yet available.<br>Your driver is on the way!</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Order Items Summary -->
+            <div class="card shadow-sm mt-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Order Items</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Quantity</th>
+                                    <th>Price</th>
+                                    <th>Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in order.items.all %}
+                                <tr>
+                                    <td>{{ item.item.name }}</td>
+                                    <td>{{ item.quantity }}</td>
+                                    <td>${{ item.price }}</td>
+                                    <td>${{ item.subtotal }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-active">
+                                    <th colspan="3" class="text-end">Subtotal:</th>
+                                    <th>${{ order.total|add:-order.delivery_fee }}</th>
+                                </tr>
+                                <tr>
+                                    <th colspan="3" class="text-end">Delivery Fee:</th>
+                                    <th>${{ order.delivery_fee }}</th>
+                                </tr>
+                                <tr class="table-success">
+                                    <th colspan="3" class="text-end">Total:</th>
+                                    <th>${{ order.total }}</th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let map;
+    let driverMarker;
+    let customerMarker;
+    let updateInterval;
+    
+    // Only initialize map if we have the required elements
+    {% if order.driver and order.delivery_latitude and order.delivery_longitude %}
+    function initTrackingMap() {
+        const customerLat = {{ order.delivery_latitude }};
+        const customerLng = {{ order.delivery_longitude }};
+        
+        map = L.map('tracking-map').setView([customerLat, customerLng], 13);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+        
+        // Customer marker
+        customerMarker = L.marker([customerLat, customerLng], {
+            icon: L.divIcon({
+                html: '<div style="background-color: #28a745; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white;"></div>',
+                iconSize: [20, 20],
+                className: 'customer-marker'
+            })
+        }).addTo(map).bindPopup('<strong>Your Location</strong>');
+        
+        {% if order.driver.current_latitude and order.driver.current_longitude %}
+        const driverLat = {{ order.driver.current_latitude }};
+        const driverLng = {{ order.driver.current_longitude }};
+        
+        driverMarker = L.marker([driverLat, driverLng], {
+            icon: L.divIcon({
+                html: '<div style="background-color: #c52e2e; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white;"></div>',
+                iconSize: [20, 20],
+                className: 'driver-marker'
+            })
+        }).addTo(map).bindPopup('<strong>Driver: {{ order.driver.user.username }}</strong>');
+        
+        // Fit bounds to show both markers
+        const bounds = L.latLngBounds([customerLat, customerLng], [driverLat, driverLng]);
+        map.fitBounds(bounds);
+        {% endif %}
+        
+        // Start location updates
+        startLocationUpdates();
+    }
+    
+    function startLocationUpdates() {
+        const driverId = {{ order.driver.id }};
+        
+        updateInterval = setInterval(function() {
+            fetch(`/driver/location/${driverId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.latitude && data.longitude && driverMarker && data.latitude !== 0 && data.longitude !== 0) {
+                        driverMarker.setLatLng([data.latitude, data.longitude]);
+                        driverMarker.bindPopup('Driver: {{ order.driver.user.username }}<br>Last updated: ' + new Date().toLocaleTimeString());
+                        
+                        // If en route, center map on driver
+                        if ('{{ order.delivery_status }}' === 'en_route') {
+                            map.setView([data.latitude, data.longitude], 14);
+                        }
+                    }
+                })
+                .catch(err => console.log('Location update failed:', err));
+        }, 10000);
+    }
+    
+    // Initialize map when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        initTrackingMap();
+    });
+    
+    // Clean up interval when page unloads
+    window.addEventListener('beforeunload', function() {
+        if (updateInterval) {
+            clearInterval(updateInterval);
+        }
+    });
+    {% endif %}
+</script>
+{% endblock %}

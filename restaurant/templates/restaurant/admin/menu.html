@@ -1,0 +1,268 @@
+{% extends 'restaurant/base.html' %}
+
+{% block title %}Menu Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>
+            <i class="fas fa-utensils me-2"></i>Menu Management
+        </h1>
+        <div>
+            <a href="{% url 'admin_add_menu_item' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i>Add Menu Item
+            </a>
+            <a href="{% url 'admin_categories' %}" class="btn btn-success">
+                <i class="fas fa-folder me-1"></i>Manage Categories
+            </a>
+            <a href="{% url 'admin_bulk_stock' %}" class="btn btn-info">
+                <i class="fas fa-boxes me-1"></i>Bulk Stock Update
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card bg-primary text-white shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0">Total Items</h6>
+                            <h2 class="mb-0">{{ total_items }}</h2>
+                        </div>
+                        <i class="fas fa-utensils fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card bg-success text-white shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0">Categories</h6>
+                            <h2 class="mb-0">{{ total_categories }}</h2>
+                        </div>
+                        <i class="fas fa-folder fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card bg-info text-white shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0">Available Items</h6>
+                            <h2 class="mb-0">{{ available_items }}</h2>
+                        </div>
+                        <i class="fas fa-check-circle fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card bg-warning text-dark shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0">Low Stock</h6>
+                            <h2 class="mb-0">{{ low_stock_count|default:0 }}</h2>
+                        </div>
+                        <i class="fas fa-exclamation-triangle fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Menu Items by Category -->
+    {% if categories %}
+        {% for category in categories %}
+        <div class="card mb-4 shadow-sm">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">
+                    <i class="fas fa-tag me-2"></i>{{ category.name }}
+                </h4>
+                <span class="badge bg-light text-dark">
+                    <i class="fas fa-utensils me-1"></i>{{ category.menu_items.count }} items
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="20%">Item Name</th>
+                                <th width="35%">Description</th>
+                                <th width="10%">Price</th>
+                                <th width="10%">Stock</th>
+                                <th width="10%">Status</th>
+                                <th width="15%">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in category.menu_items.all %}
+                            <tr>
+                                <td>
+                                    <strong>{{ item.name }}</strong>
+                                    {% if item.image %}
+                                    <br>
+                                    <small class="text-muted">
+                                        <i class="fas fa-image me-1"></i>Has image
+                                    </small>
+                                    {% endif %}
+                                </td>
+                                <td class="text-muted">{{ item.description|truncatewords:20 }}</td>
+                                <td>
+                                    <span class="fw-bold text-success">${{ item.price }}</span>
+                                </td>
+                                <td>
+                                    {% if item.stock <= 0 %}
+                                        <span class="badge bg-danger">Out of Stock</span>
+                                    {% elif item.stock <= item.low_stock_threshold %}
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="fas fa-exclamation-triangle me-1"></i>{{ item.stock }} left
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-success">{{ item.stock }} in stock</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if item.available %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check-circle me-1"></i>Available
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-danger">
+                                            <i class="fas fa-times-circle me-1"></i>Unavailable
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a href="{% url 'admin_edit_menu_item' item.id %}" class="btn btn-outline-primary" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <a href="{% url 'admin_delete_menu_item' item.id %}" class="btn btn-outline-danger" title="Delete">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center py-5 text-muted">
+                                    <i class="fas fa-folder-open fa-3x mb-3 d-block"></i>
+                                    <p>No items in this category yet.</p>
+                                    <a href="{% url 'admin_add_menu_item' %}" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-plus me-1"></i>Add First Item
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <!-- No Categories Message -->
+        <div class="card shadow-sm">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-folder-open fa-4x text-muted mb-3"></i>
+                <h3 class="text-muted">No Categories Found</h3>
+                <p class="text-muted">You need to create categories before adding menu items.</p>
+                <a href="{% url 'admin_categories' %}" class="btn btn-primary btn-lg mt-2">
+                    <i class="fas fa-plus me-2"></i>Create Your First Category
+                </a>
+            </div>
+        </div>
+        
+        <!-- Suggested Categories -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">
+                            <i class="fas fa-lightbulb text-warning me-2"></i>Suggested Categories to Create
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fas fa-utensils text-primary me-2"></i>
+                                    <span>Appetizers</span>
+                                </div>
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fas fa-fish text-primary me-2"></i>
+                                    <span>Seafood</span>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fas fa-drumstick-bite text-primary me-2"></i>
+                                    <span>Main Courses</span>
+                                </div>
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fas fa-leaf text-primary me-2"></i>
+                                    <span>Vegetarian</span>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fas fa-ice-cream text-primary me-2"></i>
+                                    <span>Desserts</span>
+                                </div>
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fas fa-wine-bottle text-primary me-2"></i>
+                                    <span>Beverages</span>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fas fa-cocktail text-primary me-2"></i>
+                                    <span>Bar Drinks</span>
+                                </div>
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fas fa-bread-slice text-primary me-2"></i>
+                                    <span>Breads & Sides</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Low Stock Warning Section -->
+    {% if low_stock_count and low_stock_count > 0 %}
+    <div class="alert alert-warning mt-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <i class="fas fa-exclamation-triangle fa-2x me-3 float-start"></i>
+                <strong>Low Stock Alert!</strong> 
+                {{ low_stock_count }} item(s) are running low on stock.
+                <a href="{% url 'admin_bulk_stock' %}" class="alert-link">Update stock now</a>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    // Optional: Add confirmation for delete buttons
+    document.querySelectorAll('.btn-outline-danger').forEach(button => {
+        button.addEventListener('click', function(e) {
+            if (!confirm('Are you sure you want to delete this item? This action cannot be undone.')) {
+                e.preventDefault();
+            }
+        });
+    });
+</script>
+{% endblock %}

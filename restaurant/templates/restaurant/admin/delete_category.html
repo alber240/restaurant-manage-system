@@ -1,0 +1,40 @@
+{% extends 'restaurant/base.html' %}
+
+{% block title %}Delete Category{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h3 class="mb-0">Delete Category</h3>
+                </div>
+                <div class="card-body">
+                    {% if category.menu_items.count > 0 %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Warning!</strong> This category has <strong>{{ category.menu_items.count }}</strong> menu items.
+                            You cannot delete it until you move or delete these items.
+                        </div>
+                        <div class="mt-3">
+                            <a href="{% url 'admin_menu' %}" class="btn btn-primary">Manage Menu Items</a>
+                            <a href="{% url 'admin_categories' %}" class="btn btn-secondary">Back to Categories</a>
+                        </div>
+                    {% else %}
+                        <p>Are you sure you want to delete the category <strong>"{{ category.name }}"</strong>?</p>
+                        <p class="text-danger">This action cannot be undone!</p>
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-danger">Yes, Delete</button>
+                                <a href="{% url 'admin_categories' %}" class="btn btn-secondary">Cancel</a>
+                            </div>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

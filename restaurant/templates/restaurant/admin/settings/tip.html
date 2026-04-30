@@ -1,0 +1,109 @@
+{% extends 'restaurant/base.html' %}
+{% load static %}
+
+{% block title %}Tip Settings{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <h3 class="mb-0">
+                        <i class="fas fa-dollar-sign me-2"></i>Tip Settings
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-12">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" name="enable_tips" 
+                                           id="enableTips" {% if settings.enable_tips %}checked{% endif %}>
+                                    <label class="form-check-label fs-5" for="enableTips">
+                                        <strong>Enable Tips</strong>
+                                    </label>
+                                    <p class="text-muted mt-2">Allow customers to add tips to their orders.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <h4 class="mb-3">Suggested Tip Percentages</h4>
+                        <div class="row mb-4">
+                            <div class="col-md-12">
+                                <label class="form-label">Default Tip Percentages</label>
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <div class="input-group mb-2">
+                                            <input type="number" name="tip_percentages" class="form-control" 
+                                                   value="{% if settings.suggested_tip_percentages %}{{ settings.suggested_tip_percentages.0 }}{% else %}10{% endif %}" step="1">
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="input-group mb-2">
+                                            <input type="number" name="tip_percentages" class="form-control" 
+                                                   value="{% if settings.suggested_tip_percentages %}{{ settings.suggested_tip_percentages.1 }}{% else %}15{% endif %}" step="1">
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="input-group mb-2">
+                                            <input type="number" name="tip_percentages" class="form-control" 
+                                                   value="{% if settings.suggested_tip_percentages %}{{ settings.suggested_tip_percentages.2 }}{% else %}18{% endif %}" step="1">
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="input-group mb-2">
+                                            <input type="number" name="tip_percentages" class="form-control" 
+                                                   value="{% if settings.suggested_tip_percentages %}{{ settings.suggested_tip_percentages.3 }}{% else %}20{% endif %}" step="1">
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <small class="text-muted">These percentages will be shown as suggested tip options to customers.</small>
+                            </div>
+                        </div>
+                        
+                        <h4 class="mb-3">Tip Distribution</h4>
+                        <div class="row mb-4">
+                            <div class="col-md-12">
+                                <label class="form-label">How are tips distributed?</label>
+                                <select name="tip_distribution_method" class="form-select">
+                                    <option value="waiter_keeps" {% if settings.tip_distribution_method == 'waiter_keeps' %}selected{% endif %}>
+                                        Waiter Keeps Their Tips - Each waiter keeps 100% of their own tips
+                                    </option>
+                                    <option value="pooled" {% if settings.tip_distribution_method == 'pooled' %}selected{% endif %}>
+                                        Pooled & Shared - All tips are pooled and shared equally among all staff
+                                    </option>
+                                    <option value="manager_decides" {% if settings.tip_distribution_method == 'manager_decides' %}selected{% endif %}>
+                                        Manager Decides - Manager manually distributes tips
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>How tips work:</strong><br>
+                            - Dine-in tips go to waitstaff<br>
+                            - Delivery tips go to drivers<br>
+                            - Online orders can include tips at checkout
+                        </div>
+                        
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{% url 'settings_dashboard' %}" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-warning">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,176 @@
+{% extends 'restaurant/base.html' %}
+{% load static %}
+
+{% block title %}Sales Reports{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <h1 class="mb-4">Sales Reports</h1>
+
+    <!-- Date Range Filter -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row">
+                <div class="col-md-3">
+                    <label class="form-label">Days</label>
+                    <select name="days" class="form-select">
+                        <option value="7" {% if days == 7 %}selected{% endif %}>Last 7 days</option>
+                        <option value="30" {% if days == 30 %}selected{% endif %}>Last 30 days</option>
+                        <option value="90" {% if days == 90 %}selected{% endif %}>Last 90 days</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary d-block">Apply</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Daily Sales Chart -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Daily Sales Trend</h4>
+                </div>
+                <div class="card-body">
+                    <canvas id="salesChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Sales -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Sales by Category</h4>
+                </div>
+                <div class="card-body">
+                    <canvas id="categoryChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Popular Items</h4>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Quantity Sold</th>
+                                    <th>Revenue</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in popular_items %}
+                                <tr>
+                                    <td>{{ item.item__name }}</td>
+                                    <td>{{ item.total_quantity }}</td>
+                                    <td>${{ item.total_quantity|floatformat:2 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Methods -->
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Payment Methods</h4>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Payment Method</th>
+                                    <th>Number of Orders</th>
+                                    <th>Total Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for method in payment_methods %}
+                                <tr>
+                                    <td>{{ method.name }}</td>
+                                    <td>{{ method.count }}</td>
+                                    <td>${{ method.total }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Daily Sales Chart
+const salesCtx = document.getElementById('salesChart').getContext('2d');
+const dailySales = {{ daily_sales|safe }};
+
+new Chart(salesCtx, {
+    type: 'line',
+    data: {
+        labels: dailySales.map(item => item.date),
+        datasets: [{
+            label: 'Daily Sales ($)',
+            data: dailySales.map(item => item.total),
+            borderColor: '#c52e2e',
+            backgroundColor: 'rgba(197, 46, 46, 0.1)',
+            tension: 0.4
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            legend: {
+                position: 'top',
+            }
+        }
+    }
+});
+
+// Category Chart
+const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+const categorySales = {{ category_sales|safe }};
+
+new Chart(categoryCtx, {
+    type: 'pie',
+    data: {
+        labels: categorySales.map(item => item.name),
+        datasets: [{
+            data: categorySales.map(item => item.total),
+            backgroundColor: ['#c52e2e', '#e67e22', '#f39c12', '#27ae60', '#3498db', '#9b59b6']
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

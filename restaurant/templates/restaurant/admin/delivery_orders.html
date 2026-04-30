@@ -1,0 +1,73 @@
+{% extends 'restaurant/base.html' %}
+
+{% block title %}Delivery Orders Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <h1 class="mb-4"><i class="fas fa-truck me-2"></i>Delivery Orders Management</h1>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Pending Delivery Orders</h5>
+                </div>
+                <div class="card-body">
+                    {% if pending_deliveries %}
+                        {% for order in pending_deliveries %}
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h6>Order #{{ order.id }} - {{ order.created_at|date:"M d, H:i" }}</h6>
+                                <p><strong>Customer:</strong> {{ order.user.username }}<br>
+                                <strong>Address:</strong> {{ order.delivery_address }}<br>
+                                <strong>Phone:</strong> {{ order.delivery_phone }}</p>
+                                
+                                <form method="post" action="{% url 'admin_assign_driver' order.id %}" class="mt-3">
+                                    {% csrf_token %}
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <select name="driver_id" class="form-select" required>
+                                                <option value="">Select a driver...</option>
+                                                {% for driver in available_drivers %}
+                                                <option value="{{ driver.id }}">{{ driver.user.username }} - {{ driver.vehicle_type }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <button type="submit" class="btn btn-primary w-100">Assign Driver</button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted text-center py-4">No pending delivery orders</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Available Drivers</h5>
+                </div>
+                <div class="card-body">
+                    {% if available_drivers %}
+                        {% for driver in available_drivers %}
+                        <div class="mb-2">
+                            <i class="fas fa-motorcycle me-2"></i>
+                            <strong>{{ driver.user.username }}</strong>
+                            <span class="badge bg-success float-end">Available</span>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted text-center">No drivers available</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

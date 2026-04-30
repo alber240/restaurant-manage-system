@@ -1,0 +1,123 @@
+{% extends 'restaurant/base.html' %}
+{% load static %}
+
+{% block title %}Payment Settings{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h3 class="mb-0">
+                        <i class="fas fa-credit-card me-2"></i>Payment Settings
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <h4 class="mb-3">Accepted Payment Methods</h4>
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="card mb-3">
+                                    <div class="card-body">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" name="enable_card_payment" 
+                                                   id="cardPayment" {% if settings.enable_card_payment %}checked{% endif %}>
+                                            <label class="form-check-label fw-bold" for="cardPayment">
+                                                <i class="fas fa-credit-card me-2 text-primary"></i>Credit/Debit Card
+                                            </label>
+                                            <p class="text-muted mb-0 mt-2">Accept Visa, Mastercard, American Express via Paystack</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="card mb-3">
+                                    <div class="card-body">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" name="enable_mobile_money" 
+                                                   id="mobileMoney" {% if settings.enable_mobile_money %}checked{% endif %}>
+                                            <label class="form-check-label fw-bold" for="mobileMoney">
+                                                <i class="fas fa-mobile-alt me-2 text-success"></i>Mobile Money (MTN/Airtel)
+                                            </label>
+                                            <p class="text-muted mb-0 mt-2">Accept payments via MTN Mobile Money and Airtel Money</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="card mb-3">
+                                    <div class="card-body">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" name="enable_cash_on_delivery" 
+                                                   id="cashDelivery" {% if settings.enable_cash_on_delivery %}checked{% endif %}>
+                                            <label class="form-check-label fw-bold" for="cashDelivery">
+                                                <i class="fas fa-money-bill-wave me-2 text-warning"></i>Cash on Delivery
+                                            </label>
+                                            <p class="text-muted mb-0 mt-2">Customers pay with cash when food is delivered</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="card mb-3">
+                                    <div class="card-body">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" name="enable_cash_dine_in" 
+                                                   id="cashDineIn" {% if settings.enable_cash_dine_in %}checked{% endif %}>
+                                            <label class="form-check-label fw-bold" for="cashDineIn">
+                                                <i class="fas fa-coins me-2 text-secondary"></i>Cash (Dine In)
+                                            </label>
+                                            <p class="text-muted mb-0 mt-2">Accept cash payments for dine-in customers</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <h4 class="mb-3">Tax & Service Charges</h4>
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label">Tax Rate (%)</label>
+                                <div class="input-group">
+                                    <input type="number" name="tax_rate" class="form-control" 
+                                           value="{{ settings.tax_rate }}" step="0.01">
+                                    <span class="input-group-text">%</span>
+                                </div>
+                                <small class="text-muted">Add tax to all orders. Set to 0 for no tax.</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Service Charge (%)</label>
+                                <div class="input-group">
+                                    <input type="number" name="service_charge" class="form-control" 
+                                           value="{{ settings.service_charge }}" step="0.01">
+                                    <span class="input-group-text">%</span>
+                                </div>
+                                <small class="text-muted">Add service charge to all orders. Set to 0 for no service charge.</small>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-warning">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Note:</strong> Tax and service charges will be automatically added to the order total during checkout.
+                        </div>
+                        
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{% url 'settings_dashboard' %}" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-info text-white">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

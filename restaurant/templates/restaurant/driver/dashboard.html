@@ -1,0 +1,277 @@
+{% extends 'restaurant/base.html' %}
+{% load static %}
+
+{% block title %}Driver Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .order-card {
+        transition: transform 0.2s;
+        margin-bottom: 20px;
+    }
+    .order-card:hover {
+        transform: translateY(-3px);
+    }
+    .status-available {
+        background-color: #28a745;
+        color: white;
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-size: 12px;
+    }
+    .status-busy {
+        background-color: #ffc107;
+        color: #333;
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-size: 12px;
+    }
+    .status-offline {
+        background-color: #6c757d;
+        color: white;
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-size: 12px;
+    }
+    .earning-card {
+        text-align: center;
+        padding: 15px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+    .earning-number {
+        font-size: 2rem;
+        font-weight: bold;
+    }
+    .status-badge {
+        font-size: 12px;
+        padding: 5px 10px;
+    }
+    .btn-action {
+        border-radius: 8px;
+        transition: all 0.3s;
+    }
+    .btn-action:hover {
+        transform: scale(1.02);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Driver Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>
+                <i class="fas fa-truck me-2"></i>Driver Dashboard
+            </h1>
+            <p class="text-muted">Welcome back, {{ driver.user.get_full_name|default:driver.user.username }}!</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="status-{{ driver.status }} d-inline-block">
+                <i class="fas fa-circle me-1"></i> {{ driver.status|title }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Earnings Summary -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="earning-card">
+                <i class="fas fa-dollar-sign fa-2x mb-2"></i>
+                <div class="earning-number">${{ driver.total_earnings|default:"0" }}</div>
+                <small>Total Earnings</small>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="earning-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                <i class="fas fa-truck fa-2x mb-2"></i>
+                <div class="earning-number">{{ driver.total_deliveries|default:"0" }}</div>
+                <small>Total Deliveries</small>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="earning-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                <i class="fas fa-star fa-2x mb-2"></i>
+                <div class="earning-number">{{ driver.rating|default:"5.0" }}</div>
+                <small>Driver Rating</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Assigned Deliveries Column (No more self-assignment) -->
+        <div class="col-md-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-tasks me-2"></i>My Assigned Deliveries
+                        <span class="badge bg-light text-dark float-end">{{ assigned_orders.count }}</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if assigned_orders %}
+                        {% for order in assigned_orders %}
+                        <div class="card order-card mb-3 border border-primary">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <h6 class="card-title">
+                                            Order #{{ order.id }}
+                                            <span class="badge bg-warning status-badge ms-2">{{ order.get_delivery_status_display }}</span>
+                                        </h6>
+                                        <p class="card-text small mb-1">
+                                            <strong>Customer:</strong> {{ order.user.get_full_name|default:order.user.username }}
+                                        </p>
+                                        <p class="card-text small mb-1">
+                                            <strong>Delivery Address:</strong> {{ order.delivery_address|truncatewords:15 }}
+                                        </p>
+                                        <p class="card-text small mb-1">
+                                            <strong>Phone:</strong> {{ order.delivery_phone }}
+                                        </p>
+                                        <p class="card-text small mb-1">
+                                            <strong>Instructions:</strong> {{ order.delivery_instruction|default:"None" }}
+                                        </p>
+                                        <p class="card-text small mt-2">
+                                            <strong>Items:</strong>
+                                            {% for item in order.items.all %}
+                                                • {{ item.quantity }}x {{ item.item.name }}<br>
+                                            {% endfor %}
+                                        </p>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-2">
+                                            <span class="badge bg-success">Delivery Fee: ${{ order.delivery_fee }}</span>
+                                            {% if order.delivery_tip %}
+                                            <span class="badge bg-warning text-dark">Tip: ${{ order.delivery_tip }}</span>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        <div class="d-grid gap-2 mt-3">
+                                            {% if order.delivery_status == 'assigned' %}
+                                            <a href="{% url 'driver_accept_order' order.id %}" class="btn btn-success btn-action">
+                                                <i class="fas fa-check-circle me-1"></i>Accept Delivery
+                                            </a>
+                                            {% elif order.delivery_status == 'accepted' %}
+                                            <a href="{% url 'driver_pickup_order' order.id %}" class="btn btn-warning btn-action">
+                                                <i class="fas fa-box me-1"></i>Mark Picked Up
+                                            </a>
+                                            {% elif order.delivery_status == 'picked_up' %}
+                                            <a href="{% url 'driver_deliver_order' order.id %}" class="btn btn-primary btn-action">
+                                                <i class="fas fa-flag-checkered me-1"></i>Mark Delivered
+                                            </a>
+                                            {% elif order.delivery_status == 'delivered' %}
+                                            <span class="badge bg-success p-2">✓ Delivered</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
+                            <h5>No Assigned Deliveries</h5>
+                            <p class="text-muted">You don't have any active deliveries at the moment.</p>
+                            <p class="small text-muted">When the admin assigns you a delivery, it will appear here.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delivery History -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history me-2"></i>Recent Delivery History
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if delivery_history %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Order #</th>
+                                    <th>Customer</th>
+                                    <th>Delivery Fee</th>
+                                    <th>Tip</th>
+                                    <th>Total Earnings</th>
+                                    <th>Completed</th>
+                                </thead>
+                            <tbody>
+                                {% for order in delivery_history %}
+                                <tr>
+                                    <td><strong>#{{ order.id }}</strong></td>
+                                    <td>{{ order.user.username }}</td>
+                                    <td>${{ order.delivery_fee }}</td>
+                                    <td>${{ order.delivery_tip|default:"0" }}</td>
+                                    <td><strong>${{ order.delivery_fee|add:order.delivery_tip }}</strong></td>
+                                    <td>{{ order.delivered_at|date:"M d, Y H:i" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <th colspan="4" class="text-end">Total Earned:</th>
+                                    <th colspan="2">${{ driver.total_earnings|default:"0" }}</th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-truck fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No delivery history yet</p>
+                        <p class="small text-muted">Complete your first delivery to see it here</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Auto-refresh dashboard every 30 seconds to check for new assignments
+    let refreshInterval = setInterval(function() {
+        location.reload();
+    }, 30000);
+    
+    // Show notification when page loads with new assignment
+    document.addEventListener('DOMContentLoaded', function() {
+        const assignedCount = {{ assigned_orders.count }};
+        const previousCount = sessionStorage.getItem('assignedCount');
+        
+        if (previousCount && parseInt(previousCount) < assignedCount) {
+            // Show notification for new assignment
+            if (Notification.permission === "granted") {
+                new Notification("New Delivery Assignment!", {
+                    body: "You have a new delivery order assigned to you.",
+                    icon: "/static/images/icon.png"
+                });
+            }
+            
+            // Play sound
+            try {
+                const audio = new Audio('/static/sounds/notification.mp3');
+                audio.play();
+            } catch(e) { console.log("Sound error"); }
+        }
+        
+        sessionStorage.setItem('assignedCount', assignedCount);
+    });
+    
+    // Request notification permission
+    if (Notification.permission === "default") {
+        Notification.requestPermission();
+    }
+</script>
+{% endblock %}

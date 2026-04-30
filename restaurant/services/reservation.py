@@ -1,5 +1,4 @@
-from restaurant.models import Reservation, Table
-from restaurant.utils.email import send_email
+﻿from restaurant.models import Reservation, Table
 
 def create_reservation(data, user=None):
     """Create a reservation with optional user."""
@@ -9,15 +8,6 @@ def create_reservation(data, user=None):
         if not reservation.email:
             reservation.email = user.email
     reservation.save()
-
-    # Send confirmation email
-    if reservation.email:
-        send_email(
-            subject="Reservation Confirmation",
-            to_email=reservation.email,
-            template_name='restaurant/emails/reservation_confirm.html',
-            context={'reservation': reservation}
-        )
     return reservation
 
 def get_available_tables(date, time, guests):

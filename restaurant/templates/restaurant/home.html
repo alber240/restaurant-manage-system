@@ -1,10 +1,100 @@
-{% extends "restaurant/base.html" %}
+{% extends 'restaurant/base.html' %}
+{% load static %}
+
+{% block title %}Home | Gourmet House{% endblock %}
 
 {% block content %}
+<!-- Hero Section - Public -->
 <div class="hero-section">
-    <div class="container">
-        <h1 class="display-3">Welcome to Chicha & Chaimo</h1>
-        <p class="lead">Experience authentic flavors in a warm atmosphere</p>
+    <div class="container text-center">
+        <h1 class="display-4 fw-bold">Welcome to Gourmet House</h1>
+        <p class="lead">Experience the finest culinary delights in town</p>
+        <div class="mt-4">
+            <a href="{% url 'menu' %}" class="btn btn-primary btn-lg me-2">
+                <i class="fas fa-utensils me-2"></i>View Menu
+            </a>
+            <a href="{% url 'reservation' %}" class="btn btn-outline-light btn-lg">
+                <i class="fas fa-calendar-check me-2"></i>Book a Table
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Features Section -->
+    <div class="row text-center mb-5">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <i class="fas fa-truck fa-3x text-primary mb-3"></i>
+                    <h5>Free Delivery</h5>
+                    <p class="text-muted">Free delivery on orders over $30</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <i class="fas fa-clock fa-3x text-primary mb-3"></i>
+                    <h5>Open Daily</h5>
+                    <p class="text-muted">Mon-Sun: 11am - 10pm</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <i class="fas fa-qrcode fa-3x text-primary mb-3"></i>
+                    <h5>QR Code Ordering</h5>
+                    <p class="text-muted">Scan & order from your table</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Featured Menu Items -->
+    <h2 class="section-title">Popular Dishes</h2>
+    <div class="row mb-5">
+        {% for item in featured_items|slice:":3" %}
+        <div class="col-md-4 mb-4">
+            <div class="card menu-card h-100 shadow-sm">
+                {% if item.image %}
+                <img src="{{ item.image.url }}" class="card-img-top" alt="{{ item.name }}" style="height: 200px; object-fit: cover;">
+                {% else %}
+                <div class="bg-light text-center py-5">
+                    <i class="fas fa-utensils fa-3x text-muted"></i>
+                </div>
+                {% endif %}
+                <div class="card-body">
+                    <h5 class="card-title">{{ item.name }}</h5>
+                    <p class="card-text text-muted">{{ item.description|truncatewords:15 }}</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="fw-bold text-primary fs-5">${{ item.price }}</span>
+                        <a href="{% url 'menu' %}" class="btn btn-sm btn-outline-primary">Order Now</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center">
+            <p class="text-muted">Check back soon for our delicious menu items!</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Call to Action -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card bg-primary text-white text-center py-5">
+                <div class="card-body">
+                    <h3>Ready to Order?</h3>
+                    <p class="mb-4">Browse our menu and order online for pickup or delivery</p>
+                    <a href="{% url 'menu' %}" class="btn btn-light btn-lg">
+                        <i class="fas fa-utensils me-2"></i>View Full Menu
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

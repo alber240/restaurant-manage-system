@@ -51,3 +51,24 @@ def clear_cart(user):
     """Delete all items from cart."""
     cart = get_cart(user)
     cart.items.all().delete()
+    
+    
+def add_item_to_cart_by_cart(cart, item_id, quantity=1):
+    """
+    Add item to cart using existing cart object
+    """
+    from restaurant.models import CartItem, MenuItem
+    
+    item = get_object_or_404(MenuItem, id=item_id)
+    
+    cart_item, created = CartItem.objects.get_or_create(
+        cart=cart,
+        item=item,
+        defaults={'quantity': quantity}
+    )
+    
+    if not created:
+        cart_item.quantity += quantity
+        cart_item.save()
+    
+    return cart_item

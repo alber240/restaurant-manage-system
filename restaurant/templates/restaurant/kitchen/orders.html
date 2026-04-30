@@ -48,6 +48,7 @@
                             <tr>
                                 <th>Item</th>
                                 <th>Qty</th>
+                                <th>Table / Customer</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -55,6 +56,13 @@
                             <tr>
                                 <td>{{ item.item.name }}</td>
                                 <td>{{ item.quantity }}</td>
+                                <td>
+    {% if order.order_type == 'dine_in' %}
+        <span class="badge bg-info">Table {{ order.table_number|default:'N/A' }}</span>
+    {% else %}
+        <span class="badge bg-secondary">{{ order.order_type|title }}</span>
+    {% endif %}
+</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -71,6 +79,22 @@
     {% endfor %}
 </div>
 {% endblock %}
+
+<!-- Add to order card/row -->
+{% if order.status == 'pending' %}
+<div class="btn-group">
+    <form method="post" action="{% url 'kitchen_confirm_order' order.id %}" class="d-inline">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="confirm">
+        <button type="submit" class="btn btn-sm btn-success">
+            <i class="fas fa-check-circle me-1"></i>Confirm Order
+        </button>
+    </form>
+    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal{{ order.id }}">
+        <i class="fas fa-times-circle me-1"></i>Reject
+    </button>
+</div>
+{% endif %}
 
 {% block extra_js %}
  
@@ -101,6 +125,278 @@ kitchenSocket.onmessage = function(e) {
         if (select) select.value = data.status;
     }
 };
-</script>
  
+ 
+
+ 
+    // ==================================================
+    // KITCHEN DASHBOARD - COMPLETE WORKING SCRIPT
+    // Features: Auto-refresh on new orders, status updates, notifications
+    // ==================================================
+
+    let socket;
+    let reconnectAttempts = 0;
+    const maxReconnectAttempts = 10;
+
+    // ==================================================
+    // WEBSOCKET CONNECTION
+    // ==================================================
+
+    function connectWebSocket() {
+        const wsScheme = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const wsUrl = `${wsScheme}//${window.location.host}/ws/kitchen/`;
+        
+        console.log("🔌 Connecting to WebSocket:", wsUrl);
+        
+        socket = new WebSocket(wsUrl);
+        
+        socket.onopen = function(e) {
+            console.log("✅ Kitchen WebSocket connected successfully!");
+            reconnectAttempts = 0;
+            updateConnectionStatus(true);
+        };
+        
+        socket.onmessage = function(e) {
+            console.log("📦 WebSocket message received:", e.data);
+            
+            try {
+                const data = JSON.parse(e.data);
+                console.log("📊 Parsed data:", data);
+                
+                // Handle new order
+                if (data.type === 'new_order') {
+                    console.log("🆕 NEW ORDER detected! Refreshing page...");
+                    
+                    // Play notification sound
+                    playNotificationSound();
+                    
+                    // Show browser notification
+                    showBrowserNotification("🆕 New Order!", 
+                        `Order #${data.order_data.id} | Table ${data.order_data.table_number} | Total: $${data.order_data.total}`);
+                    
+                    // Show alert on page
+                    showAlert(`🎉 New order #${data.order_data.id} from Table ${data.order_data.table_number}!`);
+                    
+                    // REFRESH THE PAGE TO SHOW NEW ORDER
+                    setTimeout(() => {
+                        location.reload();
+                    }, 500);
+                }
+                
+                // Handle order status update
+                if (data.type === 'order_update') {
+                    console.log(`🔄 Order #${data.order_id} status updated to: ${data.new_status}`);
+                    
+                    // Update status in place without refresh
+                    updateOrderStatusInPlace(data.order_id, data.new_status);
+                    
+                    // Show alert
+                    showAlert(`📋 Order #${data.order_id} status: ${data.new_status}`);
+                }
+                
+            } catch (err) {
+                console.error("❌ Error parsing WebSocket message:", err);
+            }
+        };
+        
+        socket.onclose = function(e) {
+            console.log("❌ Kitchen WebSocket disconnected. Code:", e.code);
+            updateConnectionStatus(false);
+            
+            if (reconnectAttempts < maxReconnectAttempts) {
+                reconnectAttempts++;
+                console.log(`🔄 Reconnecting in 3 seconds... (Attempt ${reconnectAttempts}/${maxReconnectAttempts})`);
+                setTimeout(connectWebSocket, 3000);
+            } else {
+                console.error("❌ Max reconnection attempts reached. Please refresh the page.");
+                showAlert("⚠️ Connection lost. Please refresh the page.", "warning");
+            }
+        };
+        
+        socket.onerror = function(e) {
+            console.error("⚠️ WebSocket error:", e);
+        };
+    }
+
+    // ==================================================
+    // UI HELPER FUNCTIONS
+    // ==================================================
+
+    function updateConnectionStatus(isConnected) {
+        let statusDiv = document.getElementById('wsConnectionStatus');
+        
+        if (!statusDiv) {
+            statusDiv = document.createElement('div');
+            statusDiv.id = 'wsConnectionStatus';
+            statusDiv.className = 'mb-3';
+            const container = document.querySelector('.container-fluid');
+            if (container) {
+                container.insertBefore(statusDiv, container.firstChild);
+            }
+        }
+        
+        if (isConnected) {
+            statusDiv.innerHTML = '<div class="alert alert-success py-2">✅ Live Updates: Connected</div>';
+            setTimeout(() => {
+                if (statusDiv) statusDiv.style.display = 'none';
+            }, 3000);
+        } else {
+            statusDiv.innerHTML = '<div class="alert alert-warning py-2">⚠️ Connecting to live updates...</div>';
+            statusDiv.style.display = 'block';
+        }
+    }
+
+    function showAlert(message, type = "success") {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        alertDiv.innerHTML = `
+            <i class="fas fa-bell me-2"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        const container = document.querySelector('.container-fluid');
+        if (container) {
+            container.insertBefore(alertDiv, container.firstChild);
+        }
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            if (alertDiv) alertDiv.remove();
+        }, 5000);
+    }
+
+    function playNotificationSound() {
+        try {
+            // Simple beep using Web Audio API
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 880;
+            gainNode.gain.value = 0.2;
+            
+            oscillator.start();
+            setTimeout(() => oscillator.stop(), 300);
+            setTimeout(() => audioContext.close(), 400);
+        } catch(e) {
+            console.log("Sound play skipped:", e);
+        }
+    }
+
+    function showBrowserNotification(title, body) {
+        if (Notification.permission === "granted") {
+            new Notification(title, { 
+                body: body, 
+                icon: "/static/images/icon.png",
+                silent: false
+            });
+        } else if (Notification.permission !== "denied") {
+            Notification.requestPermission().then(permission => {
+                if (permission === "granted") {
+                    new Notification(title, { body: body });
+                }
+            });
+        }
+    }
+
+    function updateOrderStatusInPlace(orderId, newStatus) {
+        // Find the order card or row and update status
+        const orderElement = document.querySelector(`[data-order-id="${orderId}"]`);
+        if (orderElement) {
+            const statusBadge = orderElement.querySelector('.status-badge');
+            if (statusBadge) {
+                statusBadge.textContent = newStatus;
+                // Update badge color based on status
+                let colorClass = 'bg-warning';
+                if (newStatus === 'Preparing') colorClass = 'bg-info';
+                if (newStatus === 'Ready') colorClass = 'bg-success';
+                if (newStatus === 'Delivered') colorClass = 'bg-secondary';
+                if (newStatus === 'Cancelled') colorClass = 'bg-danger';
+                statusBadge.className = `badge ${colorClass} status-badge`;
+            }
+            
+            // Update select dropdown if exists
+            const statusSelect = orderElement.querySelector('.status-select');
+            if (statusSelect) {
+                const statusValue = newStatus.toLowerCase();
+                statusSelect.value = statusValue;
+            }
+        }
+    }
+
+    // ==================================================
+    // STATUS UPDATE HANDLER (for manual updates)
+    // ==================================================
+
+    function updateOrderStatusViaAjax(orderId, newStatus) {
+        fetch(`/update-status/${orderId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: `status=${newStatus}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert(`✅ Order #${orderId} updated to ${newStatus}`, "info");
+            }
+        })
+        .catch(error => console.error('AJAX Error:', error));
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // ==================================================
+    // INITIALIZATION
+    // ==================================================
+
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log("🚀 Kitchen Dashboard Initialized");
+        
+        // Connect WebSocket
+        connectWebSocket();
+        
+        // Request notification permission
+        if (Notification.permission === "default") {
+            Notification.requestPermission();
+        }
+        
+        // Auto-submit on status select change (for manual updates)
+        document.querySelectorAll('.status-select').forEach(select => {
+            select.addEventListener('change', function() {
+                this.form.submit();
+            });
+        });
+        
+        // Handle update status buttons
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('update-status')) {
+                const orderId = e.target.dataset.orderId;
+                const newStatus = e.target.dataset.status;
+                if (orderId && newStatus) {
+                    updateOrderStatusViaAjax(orderId, newStatus);
+                }
+            }
+        });
+    });
+</script>
 {% endblock %}

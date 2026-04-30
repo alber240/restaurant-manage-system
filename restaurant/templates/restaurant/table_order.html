@@ -1,0 +1,107 @@
+{% extends 'restaurant/base.html' %}
+{% load static %}
+
+{% block title %}Order from Table {{ table_number }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Table Header -->
+    <div class="alert alert-info text-center mb-4">
+        <i class="fas fa-table me-2"></i>
+        <strong>You are ordering from Table {{ table_number }}</strong>
+        <span class="ms-3 badge bg-success">Dine In</span>
+    </div>
+
+    <div class="row">
+        <!-- Menu Sidebar -->
+        <div class="col-md-3 mb-4">
+            <div class="card shadow-sm sticky-top" style="top: 20px;">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-list me-2"></i>Menu Categories</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for category in categories %}
+                        <a href="#cat-{{ category.id }}" class="list-group-item list-group-item-action">
+                            {{ category.name }}
+                            <span class="badge bg-primary float-end">{{ category.menu_items.count }}</span>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <!-- Cart Summary -->
+                <div class="card-footer">
+                    <h6><i class="fas fa-shopping-cart me-2"></i>Your Order</h6>
+                    {% if cart_items %}
+                        <p class="small mb-1">{{ cart_items.count }} item(s) in cart</p>
+                        <p class="small fw-bold">Total: ${{ cart.total }}</p>
+                        <a href="{% url 'table_cart' qr_token %}" class="btn btn-primary btn-sm w-100">
+                            View Cart <i class="fas fa-arrow-right ms-1"></i>
+                        </a>
+                    {% else %}
+                        <p class="text-muted small">Cart is empty</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Menu Items -->
+        <div class="col-md-9">
+            {% for category in categories %}
+                {% if category.menu_items.exists %}
+                    <div id="cat-{{ category.id }}" class="card shadow-sm mb-4">
+                        <div class="card-header bg-dark text-white">
+                            <h4 class="mb-0">{{ category.name }}</h4>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                {% for item in category.menu_items.all %}
+                                    <div class="col-md-4 mb-4">
+                                        <div class="card h-100">
+                                            {% if item.image %}
+                                            <img src="{{ item.image.url }}" class="card-img-top" alt="{{ item.name }}" style="height: 150px; object-fit: cover;">
+                                            {% else %}
+                                            <div class="bg-light text-center py-4">
+                                                <i class="fas fa-utensils fa-3x text-muted"></i>
+                                            </div>
+                                            {% endif %}
+                                            <div class="card-body">
+                                                <h5 class="card-title">{{ item.name }}</h5>
+                                                <p class="card-text small text-muted">{{ item.description|truncatewords:15 }}</p>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <span class="fw-bold text-primary fs-5">${{ item.price }}</span>
+                                                    <form method="post" action="{% url 'table_add_to_cart' qr_token item.id %}" class="d-inline">
+                                                        {% csrf_token %}
+                                                        <input type="number" name="quantity" value="1" min="1" class="form-control form-control-sm d-inline-block" style="width: 60px;">
+                                                        <button type="submit" class="btn btn-sm btn-primary">
+                                                            <i class="fas fa-cart-plus"></i>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+    // Smooth scroll for category links
+    document.querySelectorAll('.list-group-item').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const target = this.getAttribute('href');
+            document.querySelector(target).scrollIntoView({
+                behavior: 'smooth'
+            });
+        });
+    });
+</script>
+{% endblock %}

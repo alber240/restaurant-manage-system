@@ -60,6 +60,13 @@ urlpatterns = [
     
     #manage dashboard url
     path('staff/manager/', staff.manager_dashboard, name='manager_dashboard'),
+    
+    path('dashboard-redirect/', customer.dashboard_redirect, name='dashboard_redirect'),
+    
+    path('checkout/', customer.checkout, name='checkout'),
+    
+ 
+    
 ]
 
 if settings.DEBUG:

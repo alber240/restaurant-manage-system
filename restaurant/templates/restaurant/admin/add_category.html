@@ -1,0 +1,67 @@
+{% extends 'restaurant/base.html' %}
+
+{% block title %}Add Category{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    <h3 class="mb-0">Add New Category</h3>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">Category Name *</label>
+                            <input type="text" name="name" class="form-control" required 
+                                   placeholder="e.g., Appetizers, Main Courses, Desserts">
+                            <small class="text-muted">This will be displayed on the menu page.</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Slug (URL)</label>
+                            <input type="text" name="slug" class="form-control" 
+                                   placeholder="auto-generated from name">
+                            <small class="text-muted">Leave empty to auto-generate from name.</small>
+                        </div>
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{% url 'admin_categories' %}" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Create Category</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Suggested Categories -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Suggested Categories</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-utensils text-primary me-2"></i> Appetizers</li>
+                                <li><i class="fas fa-fish text-primary me-2"></i> Seafood</li>
+                                <li><i class="fas fa-drumstick-bite text-primary me-2"></i> Main Courses</li>
+                                <li><i class="fas fa-leaf text-primary me-2"></i> Vegetarian</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-ice-cream text-primary me-2"></i> Desserts</li>
+                                <li><i class="fas fa-wine-bottle text-primary me-2"></i> Beverages</li>
+                                <li><i class="fas fa-cocktail text-primary me-2"></i> Bar Drinks</li>
+                                <li><i class="fas fa-bread-slice text-primary me-2"></i> Breads</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <hr>
+                    <small class="text-muted">Click the buttons above to quickly add these categories.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

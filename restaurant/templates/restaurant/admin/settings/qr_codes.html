@@ -1,0 +1,130 @@
+{% extends 'restaurant/base.html' %}
+{% load static %}
+
+{% block title %}QR Code Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>
+            <i class="fas fa-qrcode me-2"></i>QR Code Management
+        </h1>
+        <div>
+            <form method="post" style="display: inline;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="bulk_generate">
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-layer-group me-1"></i>Bulk Generate for All Tables
+                </button>
+            </form>
+            <a href="{% url 'settings_dashboard' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Back to Settings
+            </a>
+        </div>
+    </div>
+
+    <!-- Generate New QR Code -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">Generate New QR Code</h4>
+        </div>
+        <div class="card-body">
+            <form method="post" class="row g-3">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="generate">
+                <div class="col-md-4">
+                    <label class="form-label">Table Number *</label>
+                    <input type="text" name="table_number" class="form-control" placeholder="e.g., 1, 2, 3, A1" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary d-block">
+                        <i class="fas fa-qrcode me-1"></i>Generate QR Code
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Existing QR Codes -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-dark text-white">
+            <h4 class="mb-0">Existing QR Codes</h4>
+        </div>
+        <div class="card-body">
+            {% if qr_codes %}
+                <div class="row">
+                    {% for qr in qr_codes %}
+                    <div class="col-md-3 mb-4">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <div class="bg-light p-3 rounded mb-3">
+                                    <i class="fas fa-qrcode fa-4x text-dark"></i>
+                                </div>
+                                <h5 class="card-title">Table {{ qr.table_number }}</h5>
+                                <p class="text-muted small">Token: {{ qr.qr_code_token|truncatechars:12 }}</p>
+                                <p class="text-muted small">Created: {{ qr.created_at|date:"M d, Y" }}</p>
+                                <div class="d-grid gap-2">
+                                    <a href="{% url 'download_qr_code' qr.id %}" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-download me-1"></i>Download
+                                    </a>
+                                    <form method="post">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="delete">
+                                        <input type="hidden" name="qr_id" value="{{ qr.id }}">
+                                        <button type="submit" class="btn btn-sm btn-danger w-100" 
+                                                onclick="return confirm('Delete QR code for Table {{ qr.table_number }}?')">
+                                            <i class="fas fa-trash me-1"></i>Delete
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-qrcode fa-4x text-muted mb-3"></i>
+                    <h5>No QR Codes Generated Yet</h5>
+                    <p class="text-muted">Use the form above to generate QR codes for your tables.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Preview/Instructions -->
+    <div class="card shadow-sm mt-4">
+        <div class="card-header bg-info text-white">
+            <h4 class="mb-0">How to Use QR Codes</h4>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5><i class="fas fa-print me-2"></i>Step 1: Print QR Codes</h5>
+                    <p>Download and print the QR codes for each table. Print on sticker paper or card stock for durability.</p>
+                    
+                    <h5><i class="fas fa-table me-2 mt-3"></i>Step 2: Place on Tables</h5>
+                    <p>Place the QR code sticker on each table where customers can easily scan it.</p>
+                    
+                    <h5><i class="fas fa-mobile-alt me-2 mt-3"></i>Step 3: Customer Scans</h5>
+                    <p>Customers scan the QR code with their phone camera to access the menu and place orders.</p>
+                </div>
+                <div class="col-md-6">
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <strong>Benefits of QR Code Ordering:</strong>
+                        <ul class="mt-2 mb-0">
+                            <li>No app installation required</li>
+                            <li>Contactless ordering</li>
+                            <li>Orders automatically linked to table number</li>
+                            <li>Customers can order at their own pace</li>
+                            <li>Reduces waitstaff workload</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

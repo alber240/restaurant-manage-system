@@ -3,11 +3,11 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from restaurant.forms import ReservationForm
-from restaurant.models import Order
+from restaurant.models import Order, OrderItem
 from restaurant.services import cart as cart_service
 from restaurant.services import order as order_service
 from restaurant.services import reservation as reservation_service
-
+from restaurant.models import Cart, CartItem, Order, OrderItem, RestaurantSettings
 def home_view(request):
     return render(request, 'restaurant/home.html')
 
@@ -22,13 +22,32 @@ def menu_view(request):
     categories = MenuCategory.objects.prefetch_related('menu_items').all()
     return render(request, 'restaurant/customer/menu.html', {'categories': categories})
 
-@login_required
 def add_to_cart(request, item_id):
+    """Add item to cart - Guest users can also add items"""
     if request.method == 'POST':
         quantity = int(request.POST.get('quantity', 1))
+        
+        # Get or create cart for guest or logged-in user
+        if request.user.is_authenticated:
+            cart, created = Cart.objects.get_or_create(user=request.user)
+        else:
+            session_key = request.session.session_key
+            if not session_key:
+                request.session.create()
+                session_key = request.session.session_key
+            cart, created = Cart.objects.get_or_create(session_key=session_key, user__isnull=True)
+        
+        # Add item to cart
         try:
-            cart_service.add_item_to_cart(request.user, item_id, quantity)
-            cart = cart_service.get_cart(request.user)
+            cart_item, created = CartItem.objects.get_or_create(
+                cart=cart,
+                item_id=item_id,
+                defaults={'quantity': quantity}
+            )
+            if not created:
+                cart_item.quantity += quantity
+                cart_item.save()
+            
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({
                     'success': True,
@@ -38,34 +57,74 @@ def add_to_cart(request, item_id):
             messages.success(request, "Item added to cart")
         except Exception as e:
             messages.error(request, str(e))
+        
         return redirect('menu')
 
-@login_required
 def view_cart(request):
-    cart = cart_service.get_cart(request.user)
+    """View cart - Guest users can also view cart"""
+    if request.user.is_authenticated:
+        cart = Cart.objects.filter(user=request.user).first()
+    else:
+        session_key = request.session.session_key
+        if not session_key:
+            request.session.create()
+            session_key = request.session.session_key
+        cart = Cart.objects.filter(session_key=session_key, user__isnull=True).first()
+    
     return render(request, 'restaurant/customer/cart.html', {
         'cart': cart,
-        'cart_items': cart.items.all()
+        'cart_items': cart.items.all() if cart else []
     })
 
-@login_required
+
 def remove_from_cart(request, item_id):
-    cart_service.remove_item_from_cart(request.user, item_id)
-    messages.success(request, "Item removed from cart")
+    """Remove item from cart - Guest users can also remove"""
+    if request.user.is_authenticated:
+        cart = Cart.objects.filter(user=request.user).first()
+    else:
+        session_key = request.session.session_key
+        if not session_key:
+            request.session.create()
+            session_key = request.session.session_key
+        cart = Cart.objects.filter(session_key=session_key, user__isnull=True).first()
+    
+    if cart:
+        cart.items.filter(item_id=item_id).delete()
+        messages.success(request, "Item removed from cart")
+    
     return redirect('view_cart')
 
-@login_required
 def update_cart(request, item_id):
+    """Update cart item quantity - Guest users can also update"""
     if request.method == 'POST':
         quantity = int(request.POST.get('quantity', 1))
-        cart_service.update_cart_item_quantity(request.user, item_id, quantity)
+        
+        if request.user.is_authenticated:
+            cart = Cart.objects.filter(user=request.user).first()
+        else:
+            session_key = request.session.session_key
+            if not session_key:
+                request.session.create()
+                session_key = request.session.session_key
+            cart = Cart.objects.filter(session_key=session_key, user__isnull=True).first()
+        
+        if cart:
+            cart_item = cart.items.filter(item_id=item_id).first()
+            if cart_item:
+                if quantity <= 0:
+                    cart_item.delete()
+                else:
+                    cart_item.quantity = quantity
+                    cart_item.save()
+        
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            cart = cart_service.get_cart(request.user)
-            return JsonResponse({
-                'success': True,
-                'cart_total': str(cart.total),
-                'item_count': cart.item_count
-            })
+            if cart:
+                return JsonResponse({
+                    'success': True,
+                    'cart_total': str(cart.total),
+                    'item_count': cart.item_count
+                })
+    
     return redirect('view_cart')
 
 @login_required
@@ -74,19 +133,73 @@ def order_history(request):
     return render(request, 'restaurant/customer/order_history.html', {'orders': orders})
 
 def cart_count(request):
+    """Get cart item count for navbar badge - Guest users also work"""
     count = 0
     if request.user.is_authenticated:
-        count = cart_service.get_cart_item_count(request.user)
+        cart = Cart.objects.filter(user=request.user).first()
+        if cart:
+            count = cart.item_count
+    else:
+        session_key = request.session.session_key
+        if session_key:
+            cart = Cart.objects.filter(session_key=session_key, user__isnull=True).first()
+            if cart:
+                count = cart.item_count
     return JsonResponse({'count': count})
 
-@login_required
-def checkout(request):
-    cart = cart_service.get_cart(request.user)
-    return render(request, 'restaurant/customer/checkout.html', {
-        'cart': cart,
-        'cart_items': cart.items.all()
-    })
+from decimal import Decimal
+from django.utils import timezone
 
+def guest_checkout(request):
+    """Checkout for users without account"""
+    # Get cart from session
+    session_key = request.session.session_key
+    if not session_key:
+        request.session.create()
+        session_key = request.session.session_key
+    
+    cart = Cart.objects.filter(session_key=session_key, user__isnull=True).first()
+    
+    if not cart or cart.items.count() == 0:
+        messages.error(request, "Your cart is empty")
+        return redirect('menu')
+    
+    if request.method == 'POST':
+        # Collect guest information
+        guest_email = request.POST.get('email')
+        guest_name = request.POST.get('name')
+        guest_phone = request.POST.get('phone')
+        
+        # Create order without user account
+        order = Order.objects.create(
+            user=None,  # No user attached!
+            total=cart.total,
+            status='pending',
+            payment_status='pending',
+            order_type=request.POST.get('order_type', 'delivery'),
+            # Store guest info in order notes
+            notes=f"Guest Order\nName: {guest_name}\nEmail: {guest_email}\nPhone: {guest_phone}"
+        )
+        
+        # Add order items
+        for cart_item in cart.items.all():
+            OrderItem.objects.create(
+                order=order,
+                item=cart_item.item,
+                quantity=cart_item.quantity,
+                price=cart_item.item.price
+            )
+        
+        # Clear cart
+        cart.items.all().delete()
+        
+        messages.success(request, f"Order #{order.id} placed successfully!")
+        
+        # Ask if they want to create an account
+        request.session['order_id'] = order.id
+        return redirect('order_confirmation_guest', order_id=order.id)
+    
+    return render(request, 'restaurant/customer/guest_checkout.html', {'cart': cart})
 @login_required
 def order_confirmation(request, order_id):
     order = order_service.get_order_by_id(order_id, user=request.user)
@@ -153,3 +266,471 @@ def debug_menu(request):
     </html>
     """
     return HttpResponse(html)
+
+
+from django.shortcuts import redirect
+from django.contrib.auth.decorators import login_required
+
+@login_required
+def dashboard_redirect(request):
+    """Redirect users to their appropriate dashboard based on role"""
+    if request.user.is_superuser:
+        return redirect('admin_dashboard')
+    elif hasattr(request.user, 'profile'):
+        if request.user.profile.role == 'manager':
+            return redirect('admin_dashboard')
+        elif request.user.profile.role == 'kitchen':
+            return redirect('kitchen')
+        elif request.user.profile.role == 'waiter':
+            return redirect('waiter')
+    
+    # Default redirect for customers
+    return redirect('menu')
+
+
+from restaurant.models import QRCodeTable, MenuCategory, Cart, CartItem
+from restaurant.services import cart as cart_service
+from django.utils.crypto import get_random_string
+
+def table_order(request, token):
+    """
+    Landing page when customer scans QR code
+    Table number is identified by the token
+    """
+    # Get the QR code by token
+    qr_code = get_object_or_404(QRCodeTable, qr_code_token=token, is_active=True)
+    table_number = qr_code.table_number
+    
+    # Store table number in session for this order
+    request.session['dine_in_table'] = table_number
+    request.session['order_type'] = 'dine_in'
+    
+    # Get all menu categories with items
+    categories = MenuCategory.objects.prefetch_related('menu_items').all()
+    
+    # Get or create cart for this session (no login required)
+    if not request.user.is_authenticated:
+        # Session-based cart for guests
+        if not request.session.session_key:
+            request.session.create()
+        session_key = request.session.session_key
+        
+        cart, created = Cart.objects.get_or_create(
+            session_key=session_key,
+            user=None,
+            defaults={'user': None}
+        )
+    else:
+        # Authenticated user's cart
+        cart, created = Cart.objects.get_or_create(user=request.user)
+    
+    context = {
+        'categories': categories,
+        'table_number': table_number,
+        'cart': cart,
+        'cart_items': cart.items.all(),
+        'qr_token': token,
+    }
+    
+    return render(request, 'restaurant/table_order.html', context)
+
+
+def table_add_to_cart(request, token, item_id):
+    """
+    Add item to cart from table ordering page
+    """
+    qr_code = get_object_or_404(QRCodeTable, qr_code_token=token, is_active=True)
+    
+    if request.method == 'POST':
+        quantity = int(request.POST.get('quantity', 1))
+        
+        # Get or create cart
+        if not request.user.is_authenticated:
+            if not request.session.session_key:
+                request.session.create()
+            session_key = request.session.session_key
+            cart, created = Cart.objects.get_or_create(
+                session_key=session_key,
+                user=None,
+            )
+        else:
+            cart, created = Cart.objects.get_or_create(user=request.user)
+        
+        # Add item to cart using your cart service
+        from restaurant.services import cart as cart_service
+        try:
+            # You'll need to modify your cart_service to work with cart object
+            cart_item, created = CartItem.objects.get_or_create(
+                cart=cart,
+                item_id=item_id,
+                defaults={'quantity': quantity}
+            )
+            if not created:
+                cart_item.quantity += quantity
+                cart_item.save()
+            messages.success(request, "Item added to cart")
+        except Exception as e:
+            messages.error(request, str(e))
+        
+        return redirect('table_order', token=token)
+
+
+def table_cart(request, token):
+    """
+    View cart for table ordering
+    """
+    qr_code = get_object_or_404(QRCodeTable, qr_code_token=token, is_active=True)
+    
+    # Get cart
+    if not request.user.is_authenticated:
+        session_key = request.session.session_key
+        if not session_key:
+            request.session.create()
+            session_key = request.session.session_key
+        cart = Cart.objects.filter(session_key=session_key, user__isnull=True).first()
+    else:
+        cart = Cart.objects.filter(user=request.user).first()
+    
+    context = {
+        'cart': cart,
+        'cart_items': cart.items.all() if cart else [],
+        'table_number': qr_code.table_number,
+        'qr_token': token,
+    }
+    return render(request, 'restaurant/table_cart.html', context)
+
+
+def table_checkout(request, token):
+    """
+    Checkout for table order
+    """
+    from restaurant.models import Order, OrderItem
+    from channels.layers import get_channel_layer
+    from asgiref.sync import async_to_sync
+    
+    qr_code = get_object_or_404(QRCodeTable, qr_code_token=token, is_active=True)
+    
+    # Get cart
+    if not request.user.is_authenticated:
+        session_key = request.session.session_key
+        if not session_key:
+            request.session.create()
+            session_key = request.session.session_key
+        cart = Cart.objects.filter(session_key=session_key, user__isnull=True).first()
+    else:
+        cart = Cart.objects.filter(user=request.user).first()
+    
+    if not cart or cart.items.count() == 0:
+        messages.error(request, "Your cart is empty")
+        return redirect('table_order', token=token)
+    
+    if request.method == 'POST':
+        # Calculate totals
+        total = cart.total
+        
+        # Create order for dine-in (no payment yet)
+        order = Order.objects.create(
+            user=request.user if request.user.is_authenticated else None,
+            total=total,
+            status='received',
+            payment_status='pending',
+            payment_method=None,
+            order_type='dine_in',
+            notes=f"Table: {qr_code.table_number}\nOrder from QR code"
+        )
+        
+        # Add order items
+        for cart_item in cart.items.all():
+            OrderItem.objects.create(
+                order=order,
+                item=cart_item.item,
+                quantity=cart_item.quantity,
+                price=cart_item.item.price
+            )
+        
+        # Clear the cart
+        cart.items.all().delete()
+        
+        # --- REAL-TIME WEBSOCKET NOTIFICATION ---
+        # Send notification to kitchen
+        try:
+            channel_layer = get_channel_layer()
+            
+            # Prepare order data for kitchen
+            order_items = []
+            for item in order.items.all():
+                order_items.append({
+                    'name': item.item.name,
+                    'quantity': item.quantity,
+                    'price': str(item.price)
+                })
+            
+            order_data = {
+                'id': order.id,
+                'table_number': qr_code.table_number,
+                'total': str(order.total),
+                'status': order.get_status_display(),
+                'created_at': order.created_at.strftime('%H:%M'),
+                'items': order_items,
+                'order_type': 'dine_in'
+            }
+            
+            # Send to kitchen group
+            async_to_sync(channel_layer.group_send)(
+                "kitchen",
+                {
+                    'type': 'new_order',
+                    'order_data': order_data
+                }
+            )
+            
+            # Also send to waiter group
+            async_to_sync(channel_layer.group_send)(
+                "waiter",
+                {
+                    'type': 'new_order',
+                    'order_data': order_data
+                }
+            )
+            print(f"✅ WebSocket notification sent for Order #{order.id}")
+        except Exception as e:
+            print(f"⚠️ WebSocket error: {e}")
+        
+        # Store order info in session
+        request.session['last_order_id'] = order.id
+        request.session['table_number'] = qr_code.table_number
+        
+        messages.success(request, f'Order #{order.id} placed successfully! Your food will be served shortly.')
+        return redirect('table_order_success', token=token, order_id=order.id)
+    
+    context = {
+        'cart': cart,
+        'cart_items': cart.items.all(),
+        'table_number': qr_code.table_number,
+        'qr_token': token,
+        'total': cart.total,
+    }
+    return render(request, 'restaurant/table_checkout.html', context)
+
+
+def table_order_success(request, token, order_id):
+    """
+    Order confirmation page for table orders
+    """
+    from restaurant.models import Order
+    order = get_object_or_404(Order, id=order_id)
+    
+    context = {
+        'order': order,
+        'table_number': request.session.get('table_number', 'N/A'),
+    }
+    return render(request, 'restaurant/table_order_success.html', context)
+
+
+from django.http import JsonResponse
+
+@login_required
+def order_tracking(request, order_id):
+    """Order tracking page for delivery orders"""
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+    return render(request, 'restaurant/customer/order_tracking.html', {'order': order})
+def driver_location(request, driver_id):
+    """API endpoint to get driver's current location"""
+    from restaurant.models import Driver
+    try:
+        driver = Driver.objects.get(id=driver_id)
+        return JsonResponse({
+            'latitude': float(driver.current_latitude) if driver.current_latitude else None,
+            'longitude': float(driver.current_longitude) if driver.current_longitude else None,
+            'status': driver.status
+        })
+    except Driver.DoesNotExist:
+        return JsonResponse({
+            'error': 'Driver not found',
+            'latitude': None,
+            'longitude': None
+        }, status=404)
+        
+        
+from decimal import Decimal
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from restaurant.models import Cart, CartItem, Order, OrderItem, RestaurantSettings
+
+def checkout(request):
+    """
+    Checkout page - Handles both guest and logged-in users
+    Guest users can checkout without account (will be prompted to create account after order)
+    """
+    # Get cart based on session (for guests) or user (for logged-in)
+    if request.user.is_authenticated:
+        cart = Cart.objects.filter(user=request.user).first()
+    else:
+        session_key = request.session.session_key
+        if not session_key:
+            request.session.create()
+            session_key = request.session.session_key
+        cart = Cart.objects.filter(session_key=session_key, user__isnull=True).first()
+    
+    # Check if cart exists and has items
+    if not cart or cart.items.count() == 0:
+        messages.error(request, "Your cart is empty")
+        return redirect('menu')
+    
+    # GET request - show checkout page
+    if request.method == 'GET':
+        return render(request, 'restaurant/customer/checkout.html', {
+            'cart': cart,
+            'cart_items': cart.items.all(),
+            'total': cart.total,
+            'is_guest': not request.user.is_authenticated
+        })
+    
+    # POST request - process order
+    if request.method == 'POST':
+        order_type = request.POST.get('order_type', 'delivery')
+        payment_method = request.POST.get('payment_method', 'cash')
+        
+        # Calculate total
+        subtotal = cart.total
+        delivery_fee = Decimal('0.00')
+        
+        # Handle delivery orders
+        if order_type == 'delivery':
+            delivery_address = request.POST.get('delivery_address', '')
+            delivery_phone = request.POST.get('delivery_phone', '')
+            delivery_instruction = request.POST.get('delivery_instruction', '')
+            latitude = request.POST.get('latitude', '')
+            longitude = request.POST.get('longitude', '')
+            
+            if not delivery_address or not delivery_phone:
+                messages.error(request, "Please provide delivery address and phone number")
+                return render(request, 'restaurant/customer/checkout.html', {
+                    'cart': cart,
+                    'cart_items': cart.items.all(),
+                    'total': cart.total,
+                    'is_guest': not request.user.is_authenticated
+                })
+            
+            # Calculate delivery fee from settings
+            settings = RestaurantSettings.objects.first()
+            if settings and settings.enable_delivery:
+                delivery_fee = settings.delivery_fee_amount
+            else:
+                delivery_fee = Decimal('3.00')
+        
+        total = subtotal + delivery_fee
+        
+        # Get guest info if not logged in
+        guest_name = ''
+        guest_email = ''
+        guest_phone = ''
+        
+        if not request.user.is_authenticated:
+            guest_name = request.POST.get('guest_name', '')
+            guest_email = request.POST.get('guest_email', '')
+            guest_phone = request.POST.get('guest_phone', '')
+            
+            if not guest_name or not guest_email or not guest_phone:
+                messages.error(request, "Please provide name, email and phone number")
+                return render(request, 'restaurant/customer/checkout.html', {
+                    'cart': cart,
+                    'cart_items': cart.items.all(),
+                    'total': cart.total,
+                    'is_guest': True
+                })
+        
+        # Create order
+        order = Order.objects.create(
+            user=request.user if request.user.is_authenticated else None,
+            total=total,
+            payment_method=payment_method,
+            status='pending',
+            payment_status='pending',
+            order_type=order_type,
+            notes=f"Guest Order - Name: {guest_name}\nEmail: {guest_email}\nPhone: {guest_phone}" if not request.user.is_authenticated else ""
+        )
+        
+        # Add order items
+        for cart_item in cart.items.all():
+            OrderItem.objects.create(
+                order=order,
+                item=cart_item.item,
+                quantity=cart_item.quantity,
+                price=cart_item.item.price
+            )
+        
+        # Update order with delivery details
+        if order_type == 'delivery':
+            order.delivery_address = delivery_address
+            order.delivery_phone = delivery_phone
+            order.delivery_instruction = delivery_instruction
+            order.delivery_latitude = latitude
+            order.delivery_longitude = longitude
+            order.delivery_fee = delivery_fee
+            order.delivery_status = 'pending'
+            order.save()
+        
+        # Clear the cart
+        cart.items.all().delete()
+        
+        messages.success(request, f'Order #{order.id} placed successfully!')
+        
+        # Redirect based on order type
+        if order_type == 'delivery':
+            if request.user.is_authenticated:
+                return redirect('order_tracking', order_id=order.id)
+            else:
+                # For guests, show order confirmation with account creation option
+                request.session['guest_order_id'] = order.id
+                return redirect('guest_order_confirmation')
+        else:
+            return redirect('order_confirmation', order_id=order.id)
+
+
+def guest_order_confirmation(request):
+    """Order confirmation page for guest users with option to create account"""
+    order_id = request.session.get('guest_order_id')
+    if not order_id:
+        return redirect('home')
+    
+    order = get_object_or_404(Order, id=order_id)
+    
+    if request.method == 'POST':
+        # Guest wants to create an account
+        password = request.POST.get('password')
+        email = request.POST.get('email')
+        
+        from django.contrib.auth.models import User
+        
+        if User.objects.filter(email=email).exists():
+            messages.error(request, "Email already exists. Please login.")
+            return redirect('login')
+        
+        # Create user account from guest order
+        username = email.split('@')[0]
+        # Make username unique
+        if User.objects.filter(username=username).exists():
+            username = f"{username}{order.id}"
+        
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password,
+            first_name=request.POST.get('name', '').split()[0] if request.POST.get('name') else '',
+            last_name=' '.join(request.POST.get('name', '').split()[1:]) if request.POST.get('name') else ''
+        )
+        
+        # Link order to user
+        order.user = user
+        order.save()
+        
+        # Log the user in
+        from django.contrib.auth import login
+        login(request, user)
+        
+        messages.success(request, "Account created! You can now track your order history.")
+        return redirect('order_tracking', order_id=order.id)
+    
+    return render(request, 'restaurant/customer/guest_confirmation.html', {'order': order})

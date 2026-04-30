@@ -1,0 +1,72 @@
+{% extends 'restaurant/base.html' %}
+
+{% block title %}Create User{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0"><i class="fas fa-user-plus me-2"></i>Create New User</h3>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">Username *</label>
+                            <input type="text" name="username" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email *</label>
+                            <input type="email" name="email" class="form-control" required>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">First Name</label>
+                                <input type="text" name="first_name" class="form-control">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Last Name</label>
+                                <input type="text" name="last_name" class="form-control">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Password *</label>
+                            <input type="password" name="password" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Confirm Password *</label>
+                            <input type="password" name="confirm_password" class="form-control" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Role *</label>
+                            <select name="role" class="form-select" required>
+                                <option value="customer">👤 Customer (Regular User)</option>
+                                <option value="kitchen">🍳 Kitchen Staff</option>
+                                <option value="waiter">🍽️ Waiter/Waitress</option>
+                                <option value="driver">🚚 Delivery Driver</option>
+                                <option value="manager">📊 Manager</option>
+                            </select>
+                            <small class="text-muted d-block mt-2">
+                                <strong>Role Permissions:</strong><br>
+                                • <strong>Kitchen Staff</strong> - Can only access kitchen dashboard<br>
+                                • <strong>Waiter</strong> - Can only access waiter dashboard<br>
+                                • <strong>Delivery Driver</strong> - Can access driver dashboard and accept deliveries<br>
+                                • <strong>Manager</strong> - Full admin access (users, menu, reports, inventory)<br>
+                                • <strong>Customer</strong> - Regular customer access (menu, cart, orders)
+                            </small>
+                        </div>
+                        
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{% url 'admin_users' %}" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Create User</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

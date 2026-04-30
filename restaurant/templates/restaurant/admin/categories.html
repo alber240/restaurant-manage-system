@@ -1,0 +1,69 @@
+{% extends 'restaurant/base.html' %}
+
+{% block title %}Category Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Category Management</h1>
+        <a href="{% url 'admin_add_category' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Add Category
+        </a>
+    </div>
+
+    <!-- Categories Table -->
+    <div class="card">
+        <div class="card-header bg-dark text-white">
+            <h4 class="mb-0">Menu Categories</h4>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Category Name</th>
+                            <th>Slug</th>
+                            <th>Menu Items</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for category in categories %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td><strong>{{ category.name }}</strong></td>
+                            <td><code>{{ category.slug }}</code></td>
+                            <td>
+                                <span class="badge bg-info">{{ category.menu_items.count }}</span>
+                            </td>
+                            <td>
+                                <a href="{% url 'admin_edit_category' category.id %}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-edit"></i> Edit
+                                </a>
+                                <a href="{% url 'admin_delete_category' category.id %}" class="btn btn-sm btn-danger">
+                                    <i class="fas fa-trash"></i> Delete
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-4">
+                                <i class="fas fa-folder-open fa-3x text-muted mb-3 d-block"></i>
+                                <p>No categories found. Click "Add Category" to create your first category.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Tip -->
+    <div class="alert alert-info mt-4">
+        <i class="fas fa-info-circle me-2"></i>
+        <strong>Tip:</strong> Categories help organize your menu. Create categories like "Appetizers", "Main Courses", "Desserts", "Beverages" before adding menu items.
+    </div>
+</div>
+{% endblock %}
