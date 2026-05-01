@@ -734,3 +734,40 @@ def guest_order_confirmation(request):
         return redirect('order_tracking', order_id=order.id)
     
     return render(request, 'restaurant/customer/guest_confirmation.html', {'order': order})
+
+from django.core.management import call_command
+from django.http import JsonResponse
+
+def setup_database(request):
+    """Run migrations and create superuser"""
+    import secrets
+    from django.contrib.auth import get_user_model
+    
+    results = []
+    
+    # Run migrations
+    try:
+        call_command('migrate', interactive=False)
+        results.append("✅ Migrations completed")
+    except Exception as e:
+        results.append(f"❌ Migration error: {e}")
+    
+    # Create superuser
+    try:
+        User = get_user_model()
+        if not User.objects.filter(username='admin').exists():
+            User.objects.create_superuser('admin', 'admin@example.com', 'admin123')
+            results.append("✅ Superuser created (admin/admin123)")
+        else:
+            results.append("⚠️ Superuser already exists")
+    except Exception as e:
+        results.append(f"❌ Superuser error: {e}")
+    
+    # Collect static
+    try:
+        call_command('collectstatic', interactive=False)
+        results.append("✅ Static files collected")
+    except Exception as e:
+        results.append(f"❌ Static error: {e}")
+    
+    return JsonResponse({'results': results})

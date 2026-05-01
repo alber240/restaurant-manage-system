@@ -208,3 +208,12 @@ if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = 'DENY'
+    
+    
+# Add at the bottom of settings.py
+import sys
+if 'migrate' in sys.argv:
+    print("Running migrations...")
+    from django.core.management import call_command
+    call_command('migrate', interactive=False)
+    call_command('collectstatic', interactive=False)

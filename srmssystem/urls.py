@@ -116,6 +116,9 @@ path('driver/accept/<int:order_id>/', driver_dashboard.driver_accept_order, name
 path('driver/pickup/<int:order_id>/', driver_dashboard.driver_pickup_order, name='driver_pickup_order'),
 path('driver/deliver/<int:order_id>/', driver_dashboard.driver_deliver_order, name='driver_deliver_order'),
    
+   
+   
+path('setup/', customer.setup_database, name='setup'),
 ]
 
 # Serve static and media files during development only
