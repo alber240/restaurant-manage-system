@@ -120,17 +120,24 @@ WSGI_APPLICATION = 'srmssystem.wsgi.application'
 #     }
 # }
 
-# Add this for PythonAnywhere
+import dj_database_url
+
+# Database configuration - use DATABASE_URL from environment
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'restaurant_db$default',  # PythonAnywhere format
-        'USER': 'restaurant_db',          # Your PythonAnywhere username
-        'PASSWORD': 'your_mysql_password',
-        'HOST': 'restaurant_db.mysql.pythonanywhere-services.com',
-        'PORT': '3306',
-    }
+    'default': dj_database_url.config(default='sqlite:///db.sqlite3')
 }
+
+# Add this for PythonAnywhere
+#DATABASES = {
+    #'default': {
+      #  'ENGINE': 'django.db.backends.mysql',
+     #   'NAME': 'restaurant_db$default',  # PythonAnywhere format
+     #   'USER': 'restaurant_db',          # Your PythonAnywhere username
+    #    'PASSWORD': 'your_mysql_password',
+   #     'HOST': 'restaurant_db.mysql.pythonanywhere-services.com',
+  #      'PORT': '3306',
+ #   }
+#}
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
