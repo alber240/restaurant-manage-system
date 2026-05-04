@@ -827,3 +827,94 @@ def debug_user(request, user_id):
         'password_hash': user.password[:50] + '...',
     }
     return JsonResponse(data)
+
+# ==================================================
+# REPORTS DASHBOARD
+# ==================================================
+
+@staff_member_required
+def reports_dashboard(request):
+    """Generate sales reports for daily, weekly, monthly"""
+    from django.db.models import Sum, Count
+    from datetime import datetime, timedelta
+    
+    today = timezone.now().date()
+    
+    # Date ranges
+    start_of_week = today - timedelta(days=today.weekday())
+    start_of_month = today.replace(day=1)
+    start_of_year = today.replace(month=1, day=1)
+    
+    # Get report type from request
+    report_type = request.GET.get('type', 'daily')
+    start_date = request.GET.get('start_date', '')
+    end_date = request.GET.get('end_date', '')
+    
+    if start_date and end_date:
+        start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        orders = Order.objects.filter(created_at__date__gte=start_date, created_at__date__lte=end_date)
+        report_type = 'custom'
+    elif report_type == 'weekly':
+        orders = Order.objects.filter(created_at__date__gte=start_of_week)
+    elif report_type == 'monthly':
+        orders = Order.objects.filter(created_at__date__gte=start_of_month)
+    elif report_type == 'yearly':
+        orders = Order.objects.filter(created_at__date__gte=start_of_year)
+    else:  # daily
+        orders = Order.objects.filter(created_at__date=today)
+    
+    # Total sales (completed payments only)
+    total_sales = orders.filter(payment_status='completed').aggregate(total=Sum('total'))['total'] or Decimal('0')
+    
+    # Total orders
+    total_orders = orders.count()
+    
+    # Average order value
+    avg_order_value = total_sales / total_orders if total_orders > 0 else Decimal('0')
+    
+    # Orders by status
+    orders_by_status = orders.values('status').annotate(count=Count('id')).order_by('-count')
+    
+    # Orders by payment method
+    orders_by_payment = orders.values('payment_method').annotate(
+        count=Count('id'), 
+        total=Sum('total')
+    ).exclude(payment_method__isnull=True)
+    
+    # Top selling items
+    top_items = OrderItem.objects.filter(order__in=orders).values('item__name', 'item__price').annotate(
+        total_quantity=Sum('quantity'),
+        total_revenue=Sum('price')
+    ).order_by('-total_quantity')[:10]
+    
+    # Daily sales for chart (last 30 days or custom range)
+    if start_date and end_date:
+        days_diff = (end_date - start_date).days + 1
+        days_to_show = min(days_diff, 30)
+    else:
+        days_to_show = 30
+    
+    daily_sales = []
+    for i in range(days_to_show):
+        date = today - timedelta(days=i)
+        daily_total = orders.filter(created_at__date=date, payment_status='completed').aggregate(total=Sum('total'))['total'] or Decimal('0')
+        daily_sales.append({
+            'date': date.strftime('%Y-%m-%d'),
+            'total': float(daily_total)
+        })
+    
+    context = {
+        'report_type': report_type,
+        'total_sales': total_sales,
+        'total_orders': total_orders,
+        'avg_order_value': avg_order_value,
+        'orders_by_status': orders_by_status,
+        'orders_by_payment': orders_by_payment,
+        'top_items': top_items,
+        'daily_sales': json.dumps(daily_sales),
+        'start_date': start_date if start_date else today,
+        'end_date': end_date if end_date else today,
+    }
+    
+    return render(request, 'restaurant/admin/reports_dashboard.html', context)

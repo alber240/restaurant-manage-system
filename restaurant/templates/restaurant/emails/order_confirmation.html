@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Order Confirmation</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #c52e2e; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; background-color: #f9f9f9; }
+        .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+        .total { font-size: 18px; font-weight: bold; color: #c52e2e; }
+        .status { display: inline-block; padding: 5px 10px; border-radius: 5px; font-size: 12px; }
+        .status-pending { background-color: #ffc107; color: #333; }
+        .status-confirmed { background-color: #28a745; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Order Confirmation</h1>
+            <p>Order #{{ order.id }}</p>
+        </div>
+        <div class="content">
+            <p>Dear {{ customer_name }},</p>
+            <p>Thank you for your order! Your order has been received and is being processed.</p>
+            
+            <h3>Order Summary</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Quantity</th>
+                        <th>Price</th>
+                        <th>Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in order.items.all %}
+                    <tr>
+                        <td>{{ item.item.name }}</td>
+                        <td>{{ item.quantity }}</td>
+                        <td>${{ item.price }}</td>
+                        <td>${{ item.subtotal }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="total">
+                        <td colspan="3" style="text-align: right;">Total:</td>
+                        <td>${{ order.total }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+            
+            <p><strong>Order Type:</strong> {{ order.get_order_type_display }}</p>
+            <p><strong>Payment Method:</strong> {{ order.get_payment_method_display|default:"Pending" }}</p>
+            <p><strong>Status:</strong> <span class="status status-{{ order.status }}">{{ order.get_status_display }}</span></p>
+            
+            {% if order.order_type == 'delivery' %}
+            <h3>Delivery Details</h3>
+            <p><strong>Address:</strong> {{ order.delivery_address }}</p>
+            <p><strong>Phone:</strong> {{ order.delivery_phone }}</p>
+            <p><strong>Delivery Fee:</strong> ${{ order.delivery_fee }}</p>
+            {% endif %}
+            
+            <p>You can track your order status on our website.</p>
+            <p>Thank you for choosing Gourmet House!</p>
+        </div>
+        <div class="footer">
+            <p>&copy; 2024 Gourmet House Restaurant. All rights reserved.</p>
+            <p>123 Restaurant Ave, Food City | Phone: (555) 123-4567</p>
+        </div>
+    </div>
+</body>
+</html>

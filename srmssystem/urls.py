@@ -125,6 +125,9 @@ path('accounts/logout/', LogoutView.as_view(next_page='/'), name='logout'),
 
 path('guest-order-confirmation/', customer.guest_order_confirmation, name='guest_order_confirmation'),
 
+
+#admin report
+path('admin-dashboard/reports/', admin_dashboard.reports_dashboard, name='reports_dashboard'),
 #gust
 path('guest-order-confirmation/', customer.guest_order_confirmation, name='guest_order_confirmation')
 

@@ -800,3 +800,14 @@ def setup_database(request):
         results.append(f"❌ Static error: {e}")
     
     return JsonResponse({'results': results})
+
+
+@login_required
+def order_confirmation(request, order_id):
+    """Order confirmation for logged-in users"""
+    try:
+        order = order_service.get_order_by_id(order_id, user=request.user)
+        return render(request, 'restaurant/customer/order_confirmation.html', {'order': order})
+    except Order.DoesNotExist:
+        messages.error(request, "Order not found.")
+        return redirect('order_history')

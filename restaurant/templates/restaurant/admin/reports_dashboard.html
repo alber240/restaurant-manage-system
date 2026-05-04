@@ -1,0 +1,270 @@
+{% extends 'restaurant/base.html' %}
+{% load static %}
+
+{% block title %}Sales Reports{% endblock %}
+
+{% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    .kpi-card {
+        text-align: center;
+        padding: 20px;
+        border-radius: 10px;
+        color: white;
+    }
+    .kpi-number {
+        font-size: 2.5rem;
+        font-weight: bold;
+    }
+    .bg-sales { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .bg-orders { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
+    .bg-average { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <h1 class="mb-4"><i class="fas fa-chart-line me-2"></i>Sales Reports</h1>
+    
+    <!-- Report Filters -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filter Reports</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Report Type</label>
+                    <select name="type" class="form-select">
+                        <option value="daily" {% if report_type == 'daily' %}selected{% endif %}>Daily</option>
+                        <option value="weekly" {% if report_type == 'weekly' %}selected{% endif %}>Weekly</option>
+                        <option value="monthly" {% if report_type == 'monthly' %}selected{% endif %}>Monthly</option>
+                        <option value="yearly" {% if report_type == 'yearly' %}selected{% endif %}>Yearly</option>
+                        <option value="custom" {% if report_type == 'custom' %}selected{% endif %}>Custom Range</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Start Date</label>
+                    <input type="date" name="start_date" class="form-control" value="{{ start_date|date:'Y-m-d' }}">
+    </div>
+                <div class="col-md-3">
+                    <label class="form-label">End Date</label>
+                    <input type="date" name="end_date" class="form-control" value="{{ end_date|date:'Y-m-d' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-chart-bar me-1"></i>Generate Report
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- KPI Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4 mb-3">
+            <div class="kpi-card bg-sales">
+                <i class="fas fa-dollar-sign fa-2x mb-2"></i>
+                <div class="kpi-number">${{ total_sales|floatformat:2 }}</div>
+                <p class="mb-0">Total Sales</p>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="kpi-card bg-orders">
+                <i class="fas fa-shopping-cart fa-2x mb-2"></i>
+                <div class="kpi-number">{{ total_orders }}</div>
+                <p class="mb-0">Total Orders</p>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="kpi-card bg-average">
+                <i class="fas fa-chart-line fa-2x mb-2"></i>
+                <div class="kpi-number">${{ avg_order_value|floatformat:2 }}</div>
+                <p class="mb-0">Average Order</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sales Chart -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Sales Trend</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="salesChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Orders by Status -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Orders by Status</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Status</th>
+                                    <th>Count</th>
+                                    <th>Percentage</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in orders_by_status %}
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-{% if item.status == 'completed' %}success{% elif item.status == 'pending' %}warning{% else %}secondary{% endif %}">
+                                            {{ item.status|title }}
+                                        </span>
+                                    </td>
+                                    <td>{{ item.count }}</td>
+                                    <td>
+                                        <div class="progress">
+                                            <div class="progress-bar bg-success" style="width: {% widthratio item.count total_orders 100 %}%">
+                                                {% widthratio item.count total_orders 100 %}%
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Payment Methods -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-credit-card me-2"></i>Payment Methods</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <table>
+                                    <th>Method</th>
+                                    <th>Orders</th>
+                                    <th>Total Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in orders_by_payment %}
+                                <tr>
+                                    <td>{{ item.payment_method|default:"Pending"|title }}</td>
+                                    <td>{{ item.count }}</td>
+                                    <td>${{ item.total|floatformat:2 }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center">No payment data available</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Top Selling Items -->
+    <div class="row mt-2">
+        <div class="col-md-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="fas fa-fire me-2"></i>Top Selling Items</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>#</th>
+                                    <th>Item Name</th>
+                                    <th>Quantity Sold</th>
+                                    <th>Revenue</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in top_items %}
+                                <td>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td><strong>{{ item.item__name }}</strong></td>
+                                    <td><span class="badge bg-primary">{{ item.total_quantity }}</span></td>
+                                    <td>${{ item.total_revenue|floatformat:2 }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center">No sales data available</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Sales Chart
+    const dailySales = {{ daily_sales|safe }};
+    const ctx = document.getElementById('salesChart').getContext('2d');
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: dailySales.map(item => item.date),
+            datasets: [{
+                label: 'Daily Sales ($)',
+                data: dailySales.map(item => item.total),
+                borderColor: '#c52e2e',
+                backgroundColor: 'rgba(197, 46, 46, 0.1)',
+                borderWidth: 3,
+                pointRadius: 4,
+                pointBackgroundColor: '#c52e2e',
+                tension: 0.3,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return '$' + context.raw.toFixed(2);
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value;
+                        }
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

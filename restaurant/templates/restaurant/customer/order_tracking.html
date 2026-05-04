@@ -207,20 +207,20 @@
                                 </tr>
                                 {% endfor %}
                             </tbody>
-                            <tfoot>
-                                <tr class="table-active">
-                                    <th colspan="3" class="text-end">Subtotal:</th>
-                                    <th>${{ order.total|add:-order.delivery_fee }}</th>
-                                </tr>
-                                <tr>
-                                    <th colspan="3" class="text-end">Delivery Fee:</th>
-                                    <th>${{ order.delivery_fee }}</th>
-                                </tr>
-                                <tr class="table-success">
-                                    <th colspan="3" class="text-end">Total:</th>
-                                    <th>${{ order.total }}</th>
-                                </tr>
-                            </tfoot>
+                 <tfoot>
+    <tr class="table-active">
+        <th colspan="3" class="text-end">Subtotal:</th>
+        <th>${{ order.total|floatformat:2 }}</th>
+    </tr>
+    <tr>
+        <th colspan="3" class="text-end">Delivery Fee:</th>
+        <th>${{ order.delivery_fee|floatformat:2 }}</th>
+    </tr>
+    <tr class="table-success">
+        <th colspan="3" class="text-end">Total:</th>
+        <th>${{ order.total|floatformat:2 }}</th>
+    </tr>
+</tfoot>
                         </table>
                     </div>
                 </div>
