@@ -42,7 +42,19 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'jet',
+    'cloudinary',
+    'cloudinary_storage',
 ]
+
+#Cloudinary Configuration
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': 'dkoge1tdr',
+    'API_KEY': '127892447626935',
+    'API_SECRET': 'lOcTfCAqRaTcT_0Q5RQ0U8MEKmY',
+}
+
+# Use Cloudinary for media files
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
