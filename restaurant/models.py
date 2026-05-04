@@ -127,6 +127,25 @@ class Order(models.Model):
         ('delivered', 'Delivered'),
         ('failed', 'Delivery Failed'),
     ]
+    
+        # Add these new fields
+    waiter = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='assigned_orders'
+    )
+    table = models.ForeignKey('Table', on_delete=models.SET_NULL, null=True, blank=True)
+    order_source = models.CharField(max_length=20, choices=[
+        ('customer', 'Customer Self-Order'),
+        ('waiter', 'Waiter Placed'),
+    ], default='customer')
+    
+    # For waiter tracking
+    assigned_at = models.DateTimeField(null=True, blank=True)
+    served_at = models.DateTimeField(null=True, blank=True)
+    payment_processed_at = models.DateTimeField(null=True, blank=True)
 
     # Core fields
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, db_index=True, null=True, blank=True)
@@ -285,11 +304,7 @@ from django.dispatch import receiver
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-@receiver(post_save, sender=User)
-def create_user_profile(sender, instance, created, **kwargs):
-    """Create UserProfile when a new User is created"""
-    if created:
-        UserProfile.objects.get_or_create(user=instance, defaults={'role': 'customer'})
+ 
 
 @receiver(post_save, sender=User)
 def save_user_profile(sender, instance, **kwargs):
@@ -437,21 +452,22 @@ class QRCodeTable(models.Model):
 # ==================================================
 
 class Driver(models.Model):
-    STATUS_CHOICES = (
-        ('available', 'Available'),
-        ('busy', 'On Delivery'),
-        ('offline', 'Offline'),
-    )
-    
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='driver_profile')
-    phone = models.CharField(max_length=20)
-    vehicle_type = models.CharField(max_length=50, choices=[
+    VEHICLE_CHOICES = [
         ('motorcycle', 'Motorcycle'),
         ('car', 'Car'),
         ('bicycle', 'Bicycle'),
-    ], default='motorcycle')
+    ]
+    
+    STATUS_CHOICES = [
+        ('available', 'Available'),
+        ('busy', 'On Delivery'),
+        ('offline', 'Offline'),
+    ]
+    
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='driver_profile')
+    phone = models.CharField(max_length=50)  # Changed from 20 to 50
+    vehicle_type = models.CharField(max_length=20, choices=VEHICLE_CHOICES, default='motorcycle')
     license_plate = models.CharField(max_length=20, blank=True)
-    is_available = models.BooleanField(default=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='available')
     current_latitude = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True)
     current_longitude = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True)

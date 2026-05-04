@@ -201,46 +201,85 @@
                     <!-- ROLE-BASED STAFF MENUS (Logged in users only) -->
                     <!-- ============================================ -->
                     {% if user.is_authenticated %}
-                        <!-- Kitchen Staff Menu -->
-                        {% if user.profile.role == 'kitchen' or user.profile.role == 'manager' or user.is_superuser %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'kitchen' %}">
-                                <i class="fas fa-utensils me-1"></i> Kitchen
-                            </a>
-                        </li>
-                        {% endif %}
+                        <!-- SUPERUSER - sees everything -->
+                        {% if user.is_superuser %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'kitchen' %}">
+                                    <i class="fas fa-utensils me-1"></i> Kitchen
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'waiter' %}">
+                                    <i class="fas fa-concierge-bell me-1"></i> Service
+                                </a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                                    <i class="fas fa-tachometer-alt me-1"></i> Admin
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="{% url 'admin_dashboard' %}">📊 Dashboard</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="{% url 'admin_users' %}">👥 Users</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'admin_orders' %}">📦 Orders</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'admin_menu' %}">🍽️ Menu</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'admin_categories' %}">📁 Categories</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'admin_reservations' %}">📅 Reservations</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'inventory_dashboard' %}">📦 Inventory</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'admin_delivery_orders' %}">🚚 Delivery Orders</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="{% url 'settings_dashboard' %}">
+                                        <i class="fas fa-cog me-2"></i>Settings
+                                    </a></li>
+                                </ul>
+                            </li>
                         
-                        <!-- Waiter Menu -->
-                        {% if user.profile.role == 'waiter' or user.profile.role == 'manager' or user.is_superuser %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'waiter' %}">
-                                <i class="fas fa-concierge-bell me-1"></i> Service
-                            </a>
-                        </li>
-                        {% endif %}
+                        <!-- KITCHEN STAFF - only sees kitchen -->
+                        {% elif user.profile.role == 'kitchen' %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'kitchen' %}">
+                                    <i class="fas fa-utensils me-1"></i> Kitchen
+                                </a>
+                            </li>
                         
-                        <!-- Admin/Manager Dropdown Menu -->
-                        {% if user.profile.role == 'manager' or user.is_superuser %}
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-                                <i class="fas fa-tachometer-alt me-1"></i> Admin
-                            </a>
-                            <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="{% url 'admin_dashboard' %}">📊 Dashboard</a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="{% url 'admin_users' %}">👥 User Management</a></li>
-                                <li><a class="dropdown-item" href="{% url 'admin_orders' %}">📦 Order Management</a></li>
-                                <li><a class="dropdown-item" href="{% url 'admin_menu' %}">🍽️ Menu Management</a></li>
-                                <li><a class="dropdown-item" href="{% url 'admin_categories' %}">📁 Categories</a></li>
-                                <li><a class="dropdown-item" href="{% url 'admin_reservations' %}">📅 Reservations</a></li>
-                                <li><a class="dropdown-item" href="{% url 'inventory_dashboard' %}">📦 Inventory</a></li>
-                                <li><a class="dropdown-item" href="{% url 'admin_delivery_orders' %}">🚚 Delivery Orders</a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="{% url 'settings_dashboard' %}">
-                                    <i class="fas fa-cog me-2"></i>Settings
-                                </a></li>
-                            </ul>
-                        </li>
+                        <!-- WAITER - only sees waiter dashboard -->
+                        {% elif user.profile.role == 'waiter' %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'waiter' %}">
+                                    <i class="fas fa-concierge-bell me-1"></i> Service
+                                </a>
+                            </li>
+                        
+                        <!-- DRIVER - only sees driver dashboard -->
+                        {% elif user.profile.role == 'driver' %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'driver_dashboard' %}">
+                                    <i class="fas fa-truck me-1"></i> Deliveries
+                                </a>
+                            </li>
+                        
+                        <!-- MANAGER - sees admin panel -->
+                        {% elif user.profile.role == 'manager' %}
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                                    <i class="fas fa-tachometer-alt me-1"></i> Admin
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="{% url 'admin_dashboard' %}">📊 Dashboard</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="{% url 'admin_users' %}">👥 Users</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'admin_orders' %}">📦 Orders</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'admin_menu' %}">🍽️ Menu</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'admin_categories' %}">📁 Categories</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'admin_reservations' %}">📅 Reservations</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'inventory_dashboard' %}">📦 Inventory</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'admin_delivery_orders' %}">🚚 Delivery Orders</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="{% url 'settings_dashboard' %}">
+                                        <i class="fas fa-cog me-2"></i>Settings
+                                    </a></li>
+                                </ul>
+                            </li>
                         {% endif %}
                     {% endif %}
                 </ul>

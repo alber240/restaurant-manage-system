@@ -60,13 +60,21 @@
                             <td>{{ user.email }}</td>
                             <td>{{ user.get_full_name|default:"-" }}</td>
                             <td>
-                                {% if user.is_superuser %}
-                                    <span class="badge bg-danger">Super Admin</span>
-                                {% elif user.is_staff %}
-                                    <span class="badge bg-primary">Staff</span>
-                                {% else %}
-                                    <span class="badge bg-secondary">Customer</span>
-                                {% endif %}
+                                <td>
+    {% if user.is_superuser %}
+        <span class="badge bg-danger">Super Admin</span>
+    {% elif user.profile.role == 'manager' %}
+        <span class="badge bg-primary">Manager</span>
+    {% elif user.profile.role == 'kitchen' %}
+        <span class="badge bg-info">Kitchen Staff</span>
+    {% elif user.profile.role == 'waiter' %}
+        <span class="badge bg-warning">Waiter</span>
+    {% elif user.profile.role == 'driver' %}
+        <span class="badge bg-success">Driver</span>
+    {% else %}
+        <span class="badge bg-secondary">Customer</span>
+    {% endif %}
+</td>
                             </td>
                             <td>
                                 {% if user.is_active %}

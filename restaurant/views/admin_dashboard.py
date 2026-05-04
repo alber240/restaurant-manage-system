@@ -151,10 +151,9 @@ def admin_users(request):
     }
     return render(request, 'restaurant/admin/users.html', context)
 
-
 @staff_member_required
 def admin_create_user(request):
-    """Create new user (customer, staff, or driver)"""
+    """Create new user (customer, staff, or driver) - Called from Admin Dashboard"""
     if request.method == 'POST':
         username = request.POST.get('username')
         email = request.POST.get('email')
@@ -181,57 +180,71 @@ def admin_create_user(request):
         if errors:
             for error in errors:
                 messages.error(request, error)
+            return render(request, 'restaurant/admin/create_user.html', {'errors': errors})
+        
+        # Create the user
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password,
+            first_name=first_name,
+            last_name=last_name
+        )
+        
+        # IMPORTANT: Create UserProfile with role
+        from restaurant.models import UserProfile
+        profile, created = UserProfile.objects.get_or_create(user=user)
+        profile.role = role
+        profile.save()
+        
+        # Set staff status based on role
+        if role in ['manager', 'kitchen', 'waiter']:
+            user.is_staff = True
         else:
-            # Create the user
-            user = User.objects.create_user(
-                username=username,
-                email=email,
-                password=password,
-                first_name=first_name,
-                last_name=last_name
+            user.is_staff = False
+        user.save()
+        
+        # Create Driver profile if role is driver
+        if role == 'driver':
+            from restaurant.models import Driver
+            Driver.objects.get_or_create(
+                user=user,
+                defaults={
+                    'phone': email,
+                    'vehicle_type': 'motorcycle',
+                    'status': 'available'
+                }
             )
-            
-            # Create UserProfile for role
-            from restaurant.models import UserProfile
-            profile, created = UserProfile.objects.get_or_create(user=user)
-            profile.role = role
-            profile.save()
-            
-            # Set staff status and create driver profile if needed
-            if role in ['manager', 'kitchen', 'waiter']:
-                user.is_staff = True
-            else:
-                user.is_staff = False
-            
-            user.save()
-            
-            # Create Driver profile if role is driver
-            if role == 'driver':
-                from restaurant.models import Driver
-                Driver.objects.create(
-                    user=user,
-                    phone=email,  # Use email as phone temporarily, can be updated later
-                    vehicle_type='motorcycle',  # Default vehicle type
-                    status='available'
-                )
-                messages.success(request, f'🚚 Driver account "{username}" created successfully!')
-            elif role == 'kitchen':
-                messages.success(request, f'🍳 Kitchen staff account "{username}" created successfully!')
-            elif role == 'waiter':
-                messages.success(request, f'🍽️ Waiter account "{username}" created successfully!')
-            elif role == 'manager':
-                messages.success(request, f'📊 Manager account "{username}" created successfully!')
-            else:
-                messages.success(request, f'👤 Customer account "{username}" created successfully!')
-            
-            return redirect('admin_users')
+            messages.success(request, f'🚚 Driver account "{username}" created successfully!')
+        elif role == 'kitchen':
+            messages.success(request, f'🍳 Kitchen staff account "{username}" created successfully!')
+        elif role == 'waiter':
+            messages.success(request, f'🍽️ Waiter account "{username}" created successfully!')
+        elif role == 'manager':
+            messages.success(request, f'📊 Manager account "{username}" created successfully!')
+        else:
+            messages.success(request, f'👤 Customer account "{username}" created successfully!')
+        
+        return redirect('admin_users')
     
-    # For GET request, render the form with role options
     return render(request, 'restaurant/admin/create_user.html')
+
+
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.contrib.auth import login
+from restaurant.forms import CustomUserCreationForm
+from restaurant.models import UserProfile
+
+ 
 @staff_member_required
 def admin_edit_user(request, user_id):
     """Edit user details and role"""
     user = get_object_or_404(User, id=user_id)
+    
+    # Get or create profile
+    from restaurant.models import UserProfile
+    profile, created = UserProfile.objects.get_or_create(user=user)
     
     if request.method == 'POST':
         user.username = request.POST.get('username')
@@ -241,16 +254,34 @@ def admin_edit_user(request, user_id):
         user.is_staff = request.POST.get('is_staff') == 'on'
         user.is_active = request.POST.get('is_active') == 'on'
         
+        # Update role from form
+        role = request.POST.get('role')
+        if role:
+            profile.role = role
+            profile.save()
+        
         new_password = request.POST.get('new_password')
         if new_password:
             user.set_password(new_password)
             messages.warning(request, f'Password changed for {user.username}')
         
         user.save()
+        
+        # Update driver profile if role is driver
+        if role == 'driver':
+            from restaurant.models import Driver
+            Driver.objects.get_or_create(
+                user=user,
+                defaults={'phone': user.email, 'vehicle_type': 'motorcycle', 'status': 'available'}
+            )
+        
         messages.success(request, f'User "{user.username}" updated successfully!')
         return redirect('admin_users')
     
-    context = {'edit_user': user}
+    context = {
+        'edit_user': user,
+        'user_role': profile.role,
+    }
     return render(request, 'restaurant/admin/edit_user.html', context)
 
 
@@ -384,12 +415,29 @@ def admin_export_orders(request):
     writer.writerow(['Order ID', 'Customer', 'Email', 'Total', 'Status', 'Payment Status', 'Payment Method', 'Created Date', 'Items'])
     
     for order in orders:
+        # Handle guest orders (user is None)
+        if order.user:
+            customer_name = order.user.get_full_name() or order.user.username
+            customer_email = order.user.email
+        else:
+            # Extract guest info from notes
+            customer_name = "Guest"
+            customer_email = "N/A"
+            if order.notes:
+                if 'Name:' in order.notes:
+                    for line in order.notes.split('\n'):
+                        if 'Name:' in line:
+                            customer_name = line.replace('Name:', '').strip()
+                        if 'Email:' in line:
+                            customer_email = line.replace('Email:', '').strip()
+        
+        # Get order items summary
         items_summary = ", ".join([f"{item.quantity}x {item.item.name}" for item in order.items.all()])
         
         writer.writerow([
             order.id,
-            order.user.get_full_name() or order.user.username,
-            order.user.email,
+            customer_name,
+            customer_email,
             f"${order.total}",
             order.get_status_display(),
             order.get_payment_status_display(),
@@ -761,3 +809,21 @@ def admin_assign_driver(request, order_id):
             messages.error(request, 'Please select a driver')
     
     return redirect('admin_delivery_orders')
+
+from django.http import JsonResponse
+from django.contrib.auth.hashers import check_password
+
+@staff_member_required
+def debug_user(request, user_id):
+    """Debug view to check user details"""
+    user = get_object_or_404(User, id=user_id)
+    data = {
+        'username': user.username,
+        'email': user.email,
+        'is_staff': user.is_staff,
+        'is_active': user.is_active,
+        'has_profile': hasattr(user, 'profile'),
+        'role': user.profile.role if hasattr(user, 'profile') else None,
+        'password_hash': user.password[:50] + '...',
+    }
+    return JsonResponse(data)

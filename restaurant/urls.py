@@ -65,6 +65,12 @@ urlpatterns = [
     
     path('checkout/', customer.checkout, name='checkout'),
     
+    #waiter urls
+    path('waiter/', staff.waiter_dashboard, name='waiter'),
+    path('waiter/create-order/', staff.waiter_create_order, name='waiter_create_order'),
+    path('waiter/mark-delivered/<int:order_id>/', staff.waiter_mark_delivered, name='waiter_mark_delivered'),
+    path('waiter/process-payment/<int:order_id>/', staff.waiter_process_payment, name='waiter_process_payment'),
+    
  
     
 ]

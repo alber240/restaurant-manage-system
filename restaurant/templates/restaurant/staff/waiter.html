@@ -1,56 +1,184 @@
 {% extends "restaurant/staff/base.html" %}
 {% load static %}
 
-{% block content %}
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="bi bi-bell me-2"></i>Active Orders</h2>
-        <button class="btn btn-outline-primary" id="refresh-orders">
-            <i class="bi bi-arrow-clockwise"></i> Refresh
-        </button>
-    </div>
+{% block title %}Waiter Dashboard{% endblock %}
 
-    <div class="row" id="orders-container">
-        {% for order in active_orders %}
-        <div class="col-md-6 col-lg-4 mb-4 order-card-wrapper" data-order-id="{{ order.id }}">
-            <div class="card order-card {% if order.priority %}border-danger{% endif %}">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span>Order #{{ order.id }}</span>
-                    <span class="badge bg-{% if order.status == 'received' %}warning{% elif order.status == 'preparing' %}primary{% elif order.status == 'ready' %}success{% else %}secondary{% endif %}">
-                        {{ order.get_status_display }}
-                    </span>
-                </div>
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
                 <div class="card-body">
-                    <h6 class="card-subtitle mb-2 text-muted">Table: {{ order.table.number|default:"N/A" }}</h6>
-                    <ul class="list-group list-group-flush">
-                        {% for item in order.items.all %}
-                        <li class="list-group-item d-flex justify-content-between">
-                            <span>{{ item.item.name }}</span>
-                            <span class="badge bg-secondary">x{{ item.quantity }}</span>
-                        </li>
-                        {% endfor %}
-                    </ul>
-                </div>
-                <div class="card-footer">
-                    <div class="d-grid gap-2">
-                        {% if order.status == 'received' %}
-                        <button class="btn btn-sm btn-success mark-preparing" data-order-id="{{ order.id }}">
-                            Mark as Preparing
-                        </button>
-                        {% elif order.status == 'preparing' %}
-                        <button class="btn btn-sm btn-primary mark-ready" data-order-id="{{ order.id }}">
-                            Mark as Ready
-                        </button>
-                        {% endif %}
-                    </div>
+                    <h5>My Active Orders</h5>
+                    <h2>{{ my_active_orders.count }}</h2>
                 </div>
             </div>
         </div>
-        {% empty %}
-        <div class="col-12">
-            <div class="alert alert-info">No active orders at this time.</div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5>Ready to Serve</h5>
+                    <h2>{{ ready_to_serve.count }}</h2>
+                </div>
+            </div>
         </div>
-        {% endfor %}
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <h5>Pending Payment</h5>
+                    <h2>{{ pending_payment.count }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h5>Today's Tips</h5>
+                    <h2>${{ tips_today|floatformat:2 }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <a href="{% url 'waiter_create_order' %}" class="btn btn-primary btn-lg">
+                <i class="bi bi-plus-circle me-2"></i>Take New Order
+            </a>
+        </div>
+    </div>
+
+    <!-- Ready to Serve Orders -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-bell-fill me-2"></i>Ready to Serve</h5>
+                </div>
+                <div class="card-body">
+                    {% if ready_to_serve %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Order #</th>
+                                    <th>Table</th>
+                                    <th>Items</th>
+                                    <th>Total</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in ready_to_serve %}
+                                <tr>
+                                    <td>#{{ order.id }}</td>
+                                    <td>Table {{ order.table.number }}</td>
+                                    <td>
+                                        {% for item in order.items.all %}
+                                            {{ item.quantity }}x {{ item.item.name }}<br>
+                                        {% endfor %}
+                                    </td>
+                                    <td>${{ order.total }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-warning mark-delivered" data-order-id="{{ order.id }}">
+                                            <i class="bi bi-box-seam me-1"></i>Mark Served
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center mb-0">No orders ready to serve.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Payment Orders -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0"><i class="bi bi-cash-stack me-2"></i>Pending Payment</h5>
+                </div>
+                <div class="card-body">
+                    {% if pending_payment %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Order #</th>
+                                    <th>Table</th>
+                                    <th>Total</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in pending_payment %}
+                                <tr>
+                                    <td>#{{ order.id }}</td>
+                                    <td>Table {{ order.table.number }}</td>
+                                    <td>${{ order.total }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-success process-payment" data-order-id="{{ order.id }}" data-total="{{ order.total }}">
+                                            <i class="bi bi-credit-card me-1"></i>Process Payment
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center mb-0">No pending payments.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Payment Modal -->
+<div class="modal fade" id="paymentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Process Payment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="paymentForm">
+                    {% csrf_token %}
+                    <input type="hidden" id="paymentOrderId" name="order_id">
+                    <div class="mb-3">
+                        <label class="form-label">Order Total</label>
+                        <h3 id="paymentTotal" class="text-success"></h3>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Payment Method</label>
+                        <select class="form-select" id="paymentMethod" required>
+                            <option value="cash">Cash</option>
+                            <option value="card">Card</option>
+                            <option value="mtn">MTN Mobile Money</option>
+                            <option value="airtel">Airtel Money</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tip Amount ($)</label>
+                        <input type="number" id="tipAmount" class="form-control" step="0.01" value="0">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="confirmPayment">Complete Payment</button>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -58,39 +186,74 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Refresh button
-    document.getElementById('refresh-orders').addEventListener('click', function() {
-        window.location.reload();
-    });
-
-    // Status update buttons
-    document.querySelectorAll('.mark-preparing, .mark-ready').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
+    // Mark as delivered
+    document.querySelectorAll('.mark-delivered').forEach(btn => {
+        btn.addEventListener('click', function() {
             const orderId = this.dataset.orderId;
-            const newStatus = this.classList.contains('mark-preparing') ? 'preparing' : 'ready';
-            updateOrderStatus(orderId, newStatus);
+            if (confirm('Confirm food has been served?')) {
+                fetch(`/waiter/mark-delivered/${orderId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    }
+                }).then(response => {
+                    if (response.ok) location.reload();
+                    else alert('Error marking delivered');
+                });
+            }
         });
     });
 
-    function updateOrderStatus(orderId, status) {
-        fetch(`/staff/orders/${orderId}/update-status/`, {
+    // Process payment modal
+    let currentOrderId = null;
+    document.querySelectorAll('.process-payment').forEach(btn => {
+        btn.addEventListener('click', function() {
+            currentOrderId = this.dataset.orderId;
+            document.getElementById('paymentOrderId').value = currentOrderId;
+            document.getElementById('paymentTotal').innerText = '$' + this.dataset.total;
+            new bootstrap.Modal(document.getElementById('paymentModal')).show();
+        });
+    });
+
+    // Confirm payment
+    document.getElementById('confirmPayment').addEventListener('click', function() {
+        const orderId = document.getElementById('paymentOrderId').value;
+        const paymentMethod = document.getElementById('paymentMethod').value;
+        const tipAmount = document.getElementById('tipAmount').value;
+
+        fetch(`/waiter/process-payment/${orderId}/`, {
             method: 'POST',
             headers: {
-                'X-CSRFToken': '{{ csrf_token }}',
-                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json',
             },
-            body: `status=${status}`
-        })
-        .then(response => {
-            if (response.ok) {
-                // Optionally update UI without reload
-                window.location.reload();
+            body: JSON.stringify({
+                payment_method: paymentMethod,
+                tip: tipAmount
+            })
+        }).then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
             } else {
-                alert('Failed to update status.');
+                alert('Payment failed: ' + data.error);
             }
-        })
-        .catch(error => console.error('Error:', error));
+        });
+    });
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
     }
 });
 </script>

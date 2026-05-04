@@ -10,6 +10,7 @@ from rest_framework_simplejwt.views import (
 from restaurant.views import driver_dashboard, staff
 from restaurant.views import admin_dashboard, admin_settings, customer
 from restaurant.views import auth as auth_views
+from django.contrib.auth.views import LogoutView
 urlpatterns = [
     # Admin interface
     path('admin/', admin.site.urls),
@@ -119,6 +120,14 @@ path('driver/deliver/<int:order_id>/', driver_dashboard.driver_deliver_order, na
    
    
 path('setup/', customer.setup_database, name='setup'),
+
+path('accounts/logout/', LogoutView.as_view(next_page='/'), name='logout'),
+
+path('guest-order-confirmation/', customer.guest_order_confirmation, name='guest_order_confirmation'),
+
+#gust
+path('guest-order-confirmation/', customer.guest_order_confirmation, name='guest_order_confirmation')
+
 ]
 
 # Serve static and media files during development only

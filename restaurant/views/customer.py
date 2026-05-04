@@ -274,19 +274,27 @@ from django.contrib.auth.decorators import login_required
 @login_required
 def dashboard_redirect(request):
     """Redirect users to their appropriate dashboard based on role"""
+    from restaurant.models import UserProfile
+    
+    # Get or create user profile
+    profile, created = UserProfile.objects.get_or_create(user=request.user)
+    
+    # Superuser sees admin dashboard
     if request.user.is_superuser:
         return redirect('admin_dashboard')
-    elif hasattr(request.user, 'profile'):
-        if request.user.profile.role == 'manager':
-            return redirect('admin_dashboard')
-        elif request.user.profile.role == 'kitchen':
-            return redirect('kitchen')
-        elif request.user.profile.role == 'waiter':
-            return redirect('waiter')
     
-    # Default redirect for customers
-    return redirect('menu')
-
+    # Check role and redirect accordingly
+    if profile.role == 'manager':
+        return redirect('admin_dashboard')
+    elif profile.role == 'kitchen':
+        return redirect('kitchen')
+    elif profile.role == 'waiter':
+        return redirect('waiter')
+    elif profile.role == 'driver':
+        return redirect('driver_dashboard')
+    else:
+        # Default for customers
+        return redirect('menu')
 
 from restaurant.models import QRCodeTable, MenuCategory, Cart, CartItem
 from restaurant.services import cart as cart_service
@@ -561,7 +569,7 @@ from restaurant.models import Cart, CartItem, Order, OrderItem, RestaurantSettin
 def checkout(request):
     """
     Checkout page - Handles both guest and logged-in users
-    Guest users can checkout without account (will be prompted to create account after order)
+    Guest info is OPTIONAL - customers can checkout without providing details
     """
     # Get cart based on session (for guests) or user (for logged-in)
     if request.user.is_authenticated:
@@ -589,7 +597,7 @@ def checkout(request):
     
     # POST request - process order
     if request.method == 'POST':
-        order_type = request.POST.get('order_type', 'delivery')
+        order_type = request.POST.get('order_type', 'dine_in')
         payment_method = request.POST.get('payment_method', 'cash')
         
         # Calculate total
@@ -598,14 +606,24 @@ def checkout(request):
         
         # Handle delivery orders
         if order_type == 'delivery':
-            delivery_address = request.POST.get('delivery_address', '')
-            delivery_phone = request.POST.get('delivery_phone', '')
-            delivery_instruction = request.POST.get('delivery_instruction', '')
+            delivery_address = request.POST.get('delivery_address', '').strip()
+            delivery_phone = request.POST.get('delivery_phone', '').strip()
+            delivery_instruction = request.POST.get('delivery_instruction', '').strip()
             latitude = request.POST.get('latitude', '')
             longitude = request.POST.get('longitude', '')
             
-            if not delivery_address or not delivery_phone:
-                messages.error(request, "Please provide delivery address and phone number")
+            # Validate delivery details (address is required, phone is required for delivery)
+            if not delivery_address:
+                messages.error(request, "Please provide delivery address")
+                return render(request, 'restaurant/customer/checkout.html', {
+                    'cart': cart,
+                    'cart_items': cart.items.all(),
+                    'total': cart.total,
+                    'is_guest': not request.user.is_authenticated
+                })
+            
+            if not delivery_phone:
+                messages.error(request, "Please provide phone number for delivery")
                 return render(request, 'restaurant/customer/checkout.html', {
                     'cart': cart,
                     'cart_items': cart.items.all(),
@@ -616,32 +634,36 @@ def checkout(request):
             # Calculate delivery fee from settings
             settings = RestaurantSettings.objects.first()
             if settings and settings.enable_delivery:
-                delivery_fee = settings.delivery_fee_amount
+                try:
+                    delivery_fee = Decimal(str(settings.delivery_fee_amount))
+                except:
+                    delivery_fee = Decimal('3.00')
             else:
                 delivery_fee = Decimal('3.00')
         
         total = subtotal + delivery_fee
         
-        # Get guest info if not logged in
+        # Get guest info (OPTIONAL - only for non-authenticated users)
         guest_name = ''
         guest_email = ''
         guest_phone = ''
+        guest_notes = ''
         
         if not request.user.is_authenticated:
-            guest_name = request.POST.get('guest_name', '')
-            guest_email = request.POST.get('guest_email', '')
-            guest_phone = request.POST.get('guest_phone', '')
+            guest_name = request.POST.get('guest_name', '').strip()
+            guest_email = request.POST.get('guest_email', '').strip()
+            guest_phone = request.POST.get('guest_phone', '').strip()
             
-            if not guest_name or not guest_email or not guest_phone:
-                messages.error(request, "Please provide name, email and phone number")
-                return render(request, 'restaurant/customer/checkout.html', {
-                    'cart': cart,
-                    'cart_items': cart.items.all(),
-                    'total': cart.total,
-                    'is_guest': True
-                })
+            # Build notes from guest info (only if provided)
+            guest_notes = ""
+            if guest_name:
+                guest_notes += f"Name: {guest_name}\n"
+            if guest_email:
+                guest_notes += f"Email: {guest_email}\n"
+            if guest_phone:
+                guest_notes += f"Phone: {guest_phone}\n"
         
-        # Create order
+        # Create order (allow empty notes for guests who skip the form)
         order = Order.objects.create(
             user=request.user if request.user.is_authenticated else None,
             total=total,
@@ -649,7 +671,7 @@ def checkout(request):
             status='pending',
             payment_status='pending',
             order_type=order_type,
-            notes=f"Guest Order - Name: {guest_name}\nEmail: {guest_email}\nPhone: {guest_phone}" if not request.user.is_authenticated else ""
+            notes=guest_notes if guest_notes else f"Order from {order_type}"
         )
         
         # Add order items
@@ -666,10 +688,17 @@ def checkout(request):
             order.delivery_address = delivery_address
             order.delivery_phone = delivery_phone
             order.delivery_instruction = delivery_instruction
-            order.delivery_latitude = latitude
-            order.delivery_longitude = longitude
             order.delivery_fee = delivery_fee
             order.delivery_status = 'pending'
+            
+            # Only set coordinates if they are valid numbers
+            if latitude and longitude:
+                try:
+                    order.delivery_latitude = Decimal(str(latitude))
+                    order.delivery_longitude = Decimal(str(longitude))
+                except:
+                    pass
+            
             order.save()
         
         # Clear the cart
@@ -677,16 +706,16 @@ def checkout(request):
         
         messages.success(request, f'Order #{order.id} placed successfully!')
         
-        # Redirect based on order type
+        # Redirect based on order type and user type
         if order_type == 'delivery':
             if request.user.is_authenticated:
                 return redirect('order_tracking', order_id=order.id)
             else:
-                # For guests, show order confirmation with account creation option
                 request.session['guest_order_id'] = order.id
                 return redirect('guest_order_confirmation')
         else:
             return redirect('order_confirmation', order_id=order.id)
+        
 
 
 def guest_order_confirmation(request):
