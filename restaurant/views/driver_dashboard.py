@@ -63,7 +63,7 @@ def driver_pickup_order(request, order_id):
 
 @login_required
 def driver_deliver_order(request, order_id):
-    """Driver marks order as delivered"""
+    """Driver marks order as delivered and becomes available again"""
     driver = request.user.driver_profile
     order = get_object_or_404(Order, id=order_id, driver=driver, delivery_status='picked_up')
     
@@ -77,10 +77,12 @@ def driver_deliver_order(request, order_id):
     driver.total_earnings += order.delivery_fee
     if order.delivery_tip:
         driver.total_earnings += order.delivery_tip
+    
+    # IMPORTANT: Set driver status back to AVAILABLE
     driver.status = 'available'
     driver.save()
     
-    messages.success(request, f'✅ Order #{order.id} delivered!')
+    messages.success(request, f'✅ Order #{order.id} delivered! You are now available for new deliveries.')
     return redirect('driver_dashboard')
 
 
@@ -139,3 +141,12 @@ def driver_update_location(request):
         return JsonResponse({'success': True})
     
     return JsonResponse({'error': 'Invalid method'}, status=400)
+
+@login_required
+def driver_make_available(request):
+    """Driver manually marks themselves as available"""
+    driver = request.user.driver_profile
+    driver.status = 'available'
+    driver.save()
+    messages.success(request, "You are now available for new deliveries!")
+    return redirect('driver_dashboard')

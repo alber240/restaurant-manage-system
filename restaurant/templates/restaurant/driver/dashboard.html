@@ -184,6 +184,16 @@
         </div>
     </div>
 
+<div class="mb-3">
+    {% if driver.status == 'busy' %}
+    <a href="{% url 'driver_make_available' %}" class="btn btn-success">
+        <i class="fas fa-check-circle me-1"></i>Mark Available for Next Delivery
+    </a>
+    {% else %}
+    <span class="badge bg-success">✓ Available for deliveries</span>
+    {% endif %}
+</div>
+
     <!-- Delivery History -->
     <div class="row mt-4">
         <div class="col-12">

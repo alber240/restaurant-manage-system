@@ -117,7 +117,7 @@ path('driver/accept/<int:order_id>/', driver_dashboard.driver_accept_order, name
 path('driver/pickup/<int:order_id>/', driver_dashboard.driver_pickup_order, name='driver_pickup_order'),
 path('driver/deliver/<int:order_id>/', driver_dashboard.driver_deliver_order, name='driver_deliver_order'),
    
-   
+   path('driver/make-available/', driver_dashboard.driver_make_available, name='driver_make_available'),
    
 path('setup/', customer.setup_database, name='setup'),
 

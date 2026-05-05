@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
-from .models import Reservation
+from .models import Reservation, Review
 
 from .models import MenuItem, MenuCategory, Reservation, Table
 
@@ -112,3 +112,13 @@ class MenuItemForm(forms.ModelForm):
         if stock and stock < 0:
             raise forms.ValidationError('Stock cannot be negative')
         return stock
+    
+    
+class ReviewForm(forms.ModelForm):
+    class Meta:
+        model = Review
+        fields = ['rating', 'comment']
+        widgets = {
+            'rating': forms.Select(attrs={'class': 'form-select'}),
+            'comment': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Share your experience...'}),
+        }

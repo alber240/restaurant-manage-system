@@ -1,7 +1,7 @@
 {% extends 'restaurant/base.html' %}
 {% load static %}
 
-{% block title %}Sales Reports{% endblock %}
+{% block title %}Sales Reports Dashboard{% endblock %}
 
 {% block extra_css %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -11,6 +11,10 @@
         padding: 20px;
         border-radius: 10px;
         color: white;
+        transition: transform 0.3s;
+    }
+    .kpi-card:hover {
+        transform: translateY(-5px);
     }
     .kpi-number {
         font-size: 2.5rem;
@@ -19,73 +23,114 @@
     .bg-sales { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
     .bg-orders { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
     .bg-average { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+    .bg-items { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+    
+    .filter-card {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .report-table {
+        font-size: 14px;
+    }
+    
+    .report-table th {
+        background-color: #f8f9fa;
+    }
+    
+    .status-badge {
+        padding: 4px 8px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+    .status-pending { background-color: #ffc107; color: #333; }
+    .status-confirmed { background-color: #17a2b8; color: white; }
+    .status-preparing { background-color: #007bff; color: white; }
+    .status-ready { background-color: #28a745; color: white; }
+    .status-delivered { background-color: #6c757d; color: white; }
+    .status-cancelled { background-color: #dc3545; color: white; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
-    <h1 class="mb-4"><i class="fas fa-chart-line me-2"></i>Sales Reports</h1>
-    
-    <!-- Report Filters -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-header bg-primary text-white">
-            <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filter Reports</h5>
-        </div>
-        <div class="card-body">
-            <form method="get" class="row g-3">
-                <div class="col-md-3">
-                    <label class="form-label">Report Type</label>
-                    <select name="type" class="form-select">
-                        <option value="daily" {% if report_type == 'daily' %}selected{% endif %}>Daily</option>
-                        <option value="weekly" {% if report_type == 'weekly' %}selected{% endif %}>Weekly</option>
-                        <option value="monthly" {% if report_type == 'monthly' %}selected{% endif %}>Monthly</option>
-                        <option value="yearly" {% if report_type == 'yearly' %}selected{% endif %}>Yearly</option>
-                        <option value="custom" {% if report_type == 'custom' %}selected{% endif %}>Custom Range</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Start Date</label>
-                    <input type="date" name="start_date" class="form-control" value="{{ start_date|date:'Y-m-d' }}">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>
+            <i class="fas fa-chart-line me-2 text-primary"></i>Sales Reports Dashboard
+        </h1>
+        <button onclick="window.print()" class="btn btn-secondary">
+            <i class="fas fa-print me-2"></i>Print Report
+        </button>
     </div>
-                <div class="col-md-3">
-                    <label class="form-label">End Date</label>
-                    <input type="date" name="end_date" class="form-control" value="{{ end_date|date:'Y-m-d' }}">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">&nbsp;</label>
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="fas fa-chart-bar me-1"></i>Generate Report
-                    </button>
-                </div>
-            </form>
-        </div>
+
+    <!-- Filter Section -->
+    <div class="filter-card">
+        <h5 class="mb-3"><i class="fas fa-filter me-2"></i>Filter Reports</h5>
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Report Type</label>
+                <select name="type" class="form-select">
+                    <option value="daily" {% if report_type == 'daily' %}selected{% endif %}>Daily</option>
+                    <option value="weekly" {% if report_type == 'weekly' %}selected{% endif %}>Weekly</option>
+                    <option value="monthly" {% if report_type == 'monthly' %}selected{% endif %}>Monthly</option>
+                    <option value="yearly" {% if report_type == 'yearly' %}selected{% endif %}>Yearly</option>
+                    <option value="custom" {% if report_type == 'custom' %}selected{% endif %}>Custom Range</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Start Date</label>
+                <input type="date" name="start_date" class="form-control" value="{{ start_date|date:'Y-m-d' }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">End Date</label>
+                <input type="date" name="end_date" class="form-control" value="{{ end_date|date:'Y-m-d' }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">&nbsp;</label>
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-chart-bar me-1"></i>Generate Report
+                </button>
+            </div>
+        </form>
     </div>
-    
+
     <!-- KPI Cards -->
     <div class="row mb-4">
-        <div class="col-md-4 mb-3">
+        <div class="col-md-3 mb-3">
             <div class="kpi-card bg-sales">
                 <i class="fas fa-dollar-sign fa-2x mb-2"></i>
                 <div class="kpi-number">${{ total_sales|floatformat:2 }}</div>
                 <p class="mb-0">Total Sales</p>
+                <small>{{ total_orders }} orders</small>
             </div>
         </div>
-        <div class="col-md-4 mb-3">
+        <div class="col-md-3 mb-3">
             <div class="kpi-card bg-orders">
                 <i class="fas fa-shopping-cart fa-2x mb-2"></i>
                 <div class="kpi-number">{{ total_orders }}</div>
                 <p class="mb-0">Total Orders</p>
+                <small>Completed: {{ completed_orders|default:total_orders }}</small>
             </div>
         </div>
-        <div class="col-md-4 mb-3">
+        <div class="col-md-3 mb-3">
             <div class="kpi-card bg-average">
                 <i class="fas fa-chart-line fa-2x mb-2"></i>
                 <div class="kpi-number">${{ avg_order_value|floatformat:2 }}</div>
-                <p class="mb-0">Average Order</p>
+                <p class="mb-0">Average Order Value</p>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="kpi-card bg-items">
+                <i class="fas fa-utensils fa-2x mb-2"></i>
+                <div class="kpi-number">{{ top_items|length }}</div>
+                <p class="mb-0">Top Selling Items</p>
             </div>
         </div>
     </div>
-    
+
     <!-- Sales Chart -->
     <div class="row mb-4">
         <div class="col-md-12">
@@ -99,7 +144,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="row">
         <!-- Orders by Status -->
         <div class="col-md-6 mb-4">
@@ -109,30 +154,35 @@
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead class="table-light">
+                        <table class="table table-hover report-table">
+                            <thead>
                                 <tr>
                                     <th>Status</th>
                                     <th>Count</th>
                                     <th>Percentage</th>
+                                    <th>Total Value</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for item in orders_by_status %}
                                 <tr>
                                     <td>
-                                        <span class="badge bg-{% if item.status == 'completed' %}success{% elif item.status == 'pending' %}warning{% else %}secondary{% endif %}">
+                                        <span class="status-badge status-{{ item.status }}">
                                             {{ item.status|title }}
                                         </span>
                                     </td>
                                     <td>{{ item.count }}</td>
                                     <td>
-                                        <div class="progress">
-                                            <div class="progress-bar bg-success" style="width: {% widthratio item.count total_orders 100 %}%">
-                                                {% widthratio item.count total_orders 100 %}%
-                                            </div>
+                                        <div class="progress" style="height: 6px;">
+                                            <div class="progress-bar bg-success" style="width: {% widthratio item.count total_orders 100 %}%"></div>
                                         </div>
+                                        {% widthratio item.count total_orders 100 %}%
                                     </td>
+                                    <td>${{ item.total|default:"0"|floatformat:2 }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center">No data available</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -141,7 +191,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Payment Methods -->
         <div class="col-md-6 mb-4">
             <div class="card shadow-sm h-100">
@@ -150,24 +200,38 @@
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead class="table-light">
-                                <table>
+                        <table class="table table-hover report-table">
+                            <thead>
+                                <tr>
                                     <th>Method</th>
                                     <th>Orders</th>
                                     <th>Total Amount</th>
+                                    <th>Avg Order</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for item in orders_by_payment %}
                                 <tr>
-                                    <td>{{ item.payment_method|default:"Pending"|title }}</td>
+                                    <td>
+                                        {% if item.payment_method == 'card' %}
+                                            <i class="fas fa-credit-card me-1"></i> Card
+                                        {% elif item.payment_method == 'cash' %}
+                                            <i class="fas fa-money-bill me-1"></i> Cash
+                                        {% elif item.payment_method == 'mtn' %}
+                                            <i class="fas fa-mobile-alt me-1"></i> MTN Money
+                                        {% elif item.payment_method == 'airtel' %}
+                                            <i class="fas fa-mobile-alt me-1"></i> Airtel Money
+                                        {% else %}
+                                            {{ item.payment_method|default:"Pending"|title }}
+                                        {% endif %}
+                                    </td>
                                     <td>{{ item.count }}</td>
                                     <td>${{ item.total|floatformat:2 }}</td>
+                                    <td>${{ item.total|floatformat:2|divisibleby:item.count|default:"-" }}</td>
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="3" class="text-center">No payment data available</td>
+                                    <td colspan="4" class="text-center">No data available</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -177,9 +241,9 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Top Selling Items -->
-    <div class="row mt-2">
+    <div class="row mb-4">
         <div class="col-md-12">
             <div class="card shadow-sm">
                 <div class="card-header bg-warning text-dark">
@@ -187,32 +251,64 @@
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead class="table-light">
+                        <table class="table table-hover report-table">
+                            <thead>
                                 <tr>
                                     <th>#</th>
                                     <th>Item Name</th>
                                     <th>Quantity Sold</th>
-                                    <th>Revenue</th>
+                                    <th>Unit Price</th>
+                                    <th>Total Revenue</th>
+                                    <th>% of Sales</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for item in top_items %}
-                                <td>
+                                <tr>
                                     <td>{{ forloop.counter }}</td>
                                     <td><strong>{{ item.item__name }}</strong></td>
                                     <td><span class="badge bg-primary">{{ item.total_quantity }}</span></td>
+                                    <td>${{ item.item__price|floatformat:2 }}</td>
                                     <td>${{ item.total_revenue|floatformat:2 }}</td>
+                                    <td>
+                                        <div class="progress" style="height: 6px;">
+                                            <div class="progress-bar bg-warning" style="width: {% widthratio item.total_revenue total_sales 100 %}%"></div>
+                                        </div>
+                                        {% widthratio item.total_revenue total_sales 100 %}%
+                                    </td>
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="4" class="text-center">No sales data available</td>
+                                    <td colspan="6" class="text-center">No sales data available</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <th colspan="5" class="text-end">Total Revenue:</th>
+                                    <th>${{ total_sales|floatformat:2 }}</th>
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Summary Footer -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Report Summary:</strong>
+                Generated on {{ today|date:"F d, Y" }} for 
+                {% if report_type == 'daily' %}today's sales
+                {% elif report_type == 'weekly' %}this week
+                {% elif report_type == 'monthly' %}this month
+                {% elif report_type == 'yearly' %}this year
+                {% else %}custom date range
+                {% endif %}
             </div>
         </div>
     </div>
@@ -235,6 +331,8 @@
                 borderWidth: 3,
                 pointRadius: 4,
                 pointBackgroundColor: '#c52e2e',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
                 tension: 0.3,
                 fill: true
             }]
@@ -261,6 +359,16 @@
                         callback: function(value) {
                             return '$' + value;
                         }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Sales Amount ($)'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Date'
                     }
                 }
             }

@@ -790,23 +790,36 @@ def admin_delivery_orders(request):
 
 @staff_member_required
 def admin_assign_driver(request, order_id):
-    """Admin assigns a driver to an order"""
+    """Admin assigns a driver to an order (with editable delivery fee)"""
     if request.method == 'POST':
         order = get_object_or_404(Order, id=order_id)
         driver_id = request.POST.get('driver_id')
+        delivery_fee = request.POST.get('delivery_fee')
         
-        if driver_id:
-            driver = get_object_or_404(Driver, id=driver_id)
-            order.driver = driver
-            order.delivery_status = 'assigned'
-            driver.status = 'busy'
-            driver.save()
-            order.save()
-            messages.success(request, f'Driver {driver.user.username} assigned to Order #{order.id}')
-            
-            # TODO: Send notification to driver
-        else:
+        if not driver_id:
             messages.error(request, 'Please select a driver')
+            return redirect('admin_delivery_orders')
+        
+        # Update delivery fee if admin changed it
+        if delivery_fee:
+            from decimal import Decimal
+            new_fee = Decimal(delivery_fee)
+            if new_fee != order.delivery_fee:
+                order.delivery_fee = new_fee
+                messages.info(request, f'Delivery fee updated from ${order.delivery_fee} to ${new_fee}')
+        
+        # Assign driver
+        driver = get_object_or_404(Driver, id=driver_id)
+        order.driver = driver
+        order.delivery_status = 'assigned'
+        driver.status = 'busy'
+        driver.save()
+        order.save()
+        
+        messages.success(request, f'Driver {driver.user.username} assigned to Order #{order.id}')
+        
+        # Optional: Send notification to driver
+        # send_driver_notification(driver, order)
     
     return redirect('admin_delivery_orders')
 

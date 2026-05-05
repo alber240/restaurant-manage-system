@@ -14,33 +14,43 @@
                 </div>
                 <div class="card-body">
                     {% if pending_deliveries %}
-                        {% for order in pending_deliveries %}
-                        <div class="card mb-3">
-                            <div class="card-body">
-                                <h6>Order #{{ order.id }} - {{ order.created_at|date:"M d, H:i" }}</h6>
-                                <p><strong>Customer:</strong> {{ order.user.username }}<br>
-                                <strong>Address:</strong> {{ order.delivery_address }}<br>
-                                <strong>Phone:</strong> {{ order.delivery_phone }}</p>
-                                
-                                <form method="post" action="{% url 'admin_assign_driver' order.id %}" class="mt-3">
-                                    {% csrf_token %}
-                                    <div class="row">
-                                        <div class="col-md-8">
-                                            <select name="driver_id" class="form-select" required>
-                                                <option value="">Select a driver...</option>
-                                                {% for driver in available_drivers %}
-                                                <option value="{{ driver.id }}">{{ driver.user.username }} - {{ driver.vehicle_type }}</option>
-                                                {% endfor %}
-                                            </select>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <button type="submit" class="btn btn-primary w-100">Assign Driver</button>
-                                        </div>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
+                       {% for order in pending_deliveries %}
+<div class="card mb-3">
+    <div class="card-body">
+        <h6>Order #{{ order.id }}</h6>
+        <p><strong>Customer:</strong> {{ order.user.username|default:"Guest" }}</p>
+        <p><strong>Delivery Address:</strong> {{ order.delivery_address }}</p>
+        <p><strong>Phone:</strong> {{ order.delivery_phone }}</p>
+        
+        <form method="post" action="{% url 'admin_assign_driver' order.id %}" class="mt-3">
+            {% csrf_token %}
+            <div class="row">
+                <div class="col-md-4">
+                    <label class="form-label small">Delivery Fee ($)</label>
+                    <input type="number" name="delivery_fee" class="form-control" 
+                           value="{{ order.delivery_fee }}" step="0.50" required>
+                    <small class="text-muted">Default: ${{ order.delivery_fee }} | Admin can adjust</small>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label small">Select Driver</label>
+                    <select name="driver_id" class="form-select" required>
+                        <option value="">-- Select a driver --</option>
+                        {% for driver in available_drivers %}
+                        <option value="{{ driver.id }}">{{ driver.user.username }} - {{ driver.vehicle_type }}</option>
                         {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-truck me-1"></i>Assign Driver
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endfor %}
                     {% else %}
                         <p class="text-muted text-center py-4">No pending delivery orders</p>
                     {% endif %}

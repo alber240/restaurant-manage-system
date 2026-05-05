@@ -46,4 +46,10 @@
         </table>
     </div>
 </div>
+{% if order.status == 'delivered' and not order.review %}
+<a href="{% url 'add_review' order.id %}" class="btn btn-sm btn-warning">
+    <i class="fas fa-star"></i> Write Review
+</a>
+{% endif %}
+
 {% endblock %}
